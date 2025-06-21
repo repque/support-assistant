@@ -50,9 +50,9 @@ sequenceDiagram
 ### 1. **Client-Side LLM Pattern** 
 ```mermaid
 graph LR
-    A[Assistant] -->|1. Get Prompt| B[Classification Server]
-    A -->|2. Call LLM| C[OpenAI API]
-    A -->|3. Parse Result| B
+    A[Assistant] -->|1: Get Prompt| B[Classification Server]
+    A -->|2: Call LLM| C[OpenAI API]
+    A -->|3: Parse Result| B
     
     style A fill:#e3f2fd
     style C fill:#fff3e0
