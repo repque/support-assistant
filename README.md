@@ -96,18 +96,18 @@ mcp_servers/
 └── health_server.py          # Health monitoring MCP server
 
 knowledge_resources/           # Knowledge base content
-└── test_*.py                 # Comprehensive test suite
+└── tests/                    # Comprehensive test suite
 ```
 
 ## Testing
 
-The system includes comprehensive tests:
+The system includes comprehensive tests in the `tests/` directory:
 
-- **`test_system_overview.py`** - Complete system capabilities
-- **`test_multi_team_classification.py`** - Multi-team functionality  
-- **`test_classification_workflow.py`** - End-to-end workflow
-- **`test_error_handling.py`** - Error handling and edge cases
-- **`test_knowledge.py`** - Knowledge server integration
+- **`tests/test_system_overview.py`** - Complete system capabilities
+- **`tests/test_multi_team_classification.py`** - Multi-team functionality  
+- **`tests/test_classification_workflow.py`** - End-to-end workflow
+- **`tests/test_error_handling.py`** - Error handling and edge cases
+- **`tests/test_knowledge.py`** - Knowledge server integration
 
 Run all tests: `python run_tests.py`
 

@@ -30,7 +30,7 @@ def run_test(test_file: str, description: str) -> bool:
     Returns:
         bool: True if test passed, False otherwise.
     """
-    print(f"🧪 Running {description}...")
+    print(f"Running {description}...")
     try:
         result = subprocess.run([sys.executable, test_file], 
                               capture_output=True, text=True, timeout=60)
@@ -43,10 +43,10 @@ def run_test(test_file: str, description: str) -> bool:
                 print(f"   Error: {result.stderr.strip()}")
             return False
     except subprocess.TimeoutExpired:
-        print(f"⏰ {description}: TIMEOUT")
+        print(f"❌ {description}: TIMEOUT")
         return False
     except Exception as e:
-        print(f"💥 {description}: ERROR - {e}")
+        print(f"❌ {description}: ERROR - {e}")
         return False
 
 
@@ -64,16 +64,16 @@ def main():
     - Error handling and edge cases
     - Integration with knowledge server
     """
-    print("🚀 Classification Server Test Suite")
+    print("AI Support Assistant Test Suite")
     print("=" * 50)
     
     # Define tests in order of importance
     tests = [
-        ("test_system_overview.py", "System Overview & Capabilities"),
-        ("test_multi_team_classification.py", "Multi-Team Classification"), 
-        ("test_classification_workflow.py", "Classification Workflow"),
-        ("test_error_handling.py", "Error Handling & Edge Cases"),
-        ("test_knowledge.py", "Knowledge Server Integration")
+        ("tests/test_system_overview.py", "System Overview & Capabilities"),
+        ("tests/test_multi_team_classification.py", "Multi-Team Classification"), 
+        ("tests/test_classification_workflow.py", "Classification Workflow"),
+        ("tests/test_error_handling.py", "Error Handling & Edge Cases"),
+        ("tests/test_knowledge.py", "Knowledge Server Integration")
     ]
     
     results = []
@@ -82,10 +82,10 @@ def main():
             success = run_test(test_file, description)
             results.append((description, success))
         else:
-            print(f"⚠️  {description}: SKIPPED (file not found)")
+            print(f"❌ {description}: SKIPPED (file not found)")
             results.append((description, None))
     
-    print("\n📊 Test Results Summary:")
+    print("\nTest Results Summary:")
     print("-" * 30)
     
     passed = sum(1 for _, result in results if result is True)
@@ -98,15 +98,15 @@ def main():
         elif result is False:
             print(f"❌ {description}")
         else:
-            print(f"⚠️  {description} (skipped)")
+            print(f"❌ {description} (skipped)")
     
     print(f"\nTotal: {passed} passed, {failed} failed, {skipped} skipped")
     
     if failed == 0 and passed > 0:
-        print("\n🎉 All tests PASSED! Classification server is ready!")
+        print("\nAll tests PASSED! Support assistant is ready!")
         return True
     else:
-        print("\n💥 Some tests FAILED! Please check the issues above.")
+        print("\nSome tests FAILED! Please check the issues above.")
         return False
 
 
