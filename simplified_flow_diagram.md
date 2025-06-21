@@ -73,7 +73,7 @@ flowchart TD
 ### 3. **Multi-Team Support**
 ```mermaid
 graph TB
-    subgraph ATRS[ATRS Team - Trade Management Services]
+    subgraph ATRS[ATRS Team]
         A1[query] 
         A2[outage]
         A3[data_issue]
@@ -81,7 +81,7 @@ graph TB
         A5[review_request]
     end
     
-    subgraph CORE[Core Team - Infrastructure]
+    subgraph CORE[Core Team]
         C1[query]
         C2[jobs] 
         C3[sdlc]
