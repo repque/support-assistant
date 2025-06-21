@@ -57,7 +57,7 @@ journalctl -u trade-booking-service --since "1 hour ago"
 - Send final incident report within 24 hours
 
 ## Post-Incident Actions
-- Conduct blameless post-mortem
+- Conduct post-mortem
 - Update runbooks based on lessons learned
 - Enhance monitoring to detect similar issues
-- Review and test disaster recovery procedures
+- Review and test SRE procedures

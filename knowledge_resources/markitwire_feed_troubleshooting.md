@@ -6,43 +6,37 @@ This guide covers common issues and resolution steps for MarkitWire trade feed p
 ## Common Issues
 
 ### 1. Feed Eligibility Not Met
-**Symptoms:** Trade appears in booking system but doesn't feed to MarkitWire
+**Symptoms:** Trade doesn't feed to MarkitWire
 **Resolution Steps:**
-- Verify trade meets minimum notional requirements
-- Check product type is supported for MarkitWire feeds
-- Validate counterparty is approved for feeds
-- Review trade maturity date requirements
+- Verify book2 had been resolved to type "MarkitWire"
+- If book2 has not resolved correctly, check eligibility object's IneligibilityReasons
+- If book2 was resolved correctly check if there are any block events
+- Make sure downstream trade passes validation
 
 ### 2. Trade Validation Failures
 **Symptoms:** Feed rejected with validation errors
 **Resolution Steps:**
-- Check all required fields are populated
-- Validate trade economics (rates, spreads, etc.)
-- Verify regulatory classifications
-- Review trade booking validation results
+```python
+deal = ro(dealName)
+fs = deal.FeedState("MarkitWire")
+dt = fs._DownstreamTrades()[0]
+dt.validate() #investigate validation failures
+```
 
 ### 3. Downstream Processing Errors
 **Symptoms:** Feed sent but processing fails
 **Resolution Steps:**
-- Check trade status in downstream systems
-- Verify feed acknowledgment was received
-- Review any error responses from MarkitWire
-- Check connectivity to MarkitWire gateway
+- Check block events on downstream state
+- Compare values in Athena to what MW is expecting
 
 ## Monitoring Commands
-```bash
+```python
 # Check feed status
-SELECT * FROM trade_feeds WHERE trade_id = '<trade_id>';
-
-# Review validation results  
-SELECT * FROM feed_validations WHERE trade_id = '<trade_id>';
-
-# Check MarkitWire connectivity
-curl -H "Authorization: Bearer $TOKEN" https://api.markitwire.com/health
+deal = ro(dealName)
+fs = deal.FeedState("MarkitWire")
+fs.FeedStatus()
 ```
 
 ## Escalation Path
 If feeds continue to fail after following these steps:
-1. Contact MarkitWire support with trade details
-2. Escalate to Trade Operations team
-3. Engage Infrastructure team for connectivity issues
+Contact ATRS MarkitWire Support with trade details and repro

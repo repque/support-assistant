@@ -38,7 +38,7 @@ This runbook covers procedures for investigating and resolving data reconciliati
    - Check for data type mismatches or nulls
    - Verify timestamp consistency across systems
 
-### 2. ETL Pipeline Data Issues
+### 2. Downstream Data Issues
 **Symptoms:**
 - Data not appearing in target systems
 - Transformation errors in processing
@@ -46,10 +46,9 @@ This runbook covers procedures for investigating and resolving data reconciliati
 
 **Resolution Process:**
 1. **Pipeline Health Check:**
-   - Check ETL job execution logs
+   - Check STP job execution logs
    - Verify data transformation logic
-   - Validate mapping rules and business logic
-   - Review data lineage and dependencies
+   - Validate mapping rules and custom logic
 
 2. **Data Quality Validation:**
    ```bash
