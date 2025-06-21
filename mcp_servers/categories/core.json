@@ -1,0 +1,90 @@
+{
+  "team_info": {
+    "name": "Core",
+    "description": "Athena Core Platform team responsible for infrastructure, databases, CI/CD, and emerging technologies",
+    "domain": "core"
+  },
+  "categories": {
+    "query": {
+      "description": "General technical questions, how-to requests, and troubleshooting guidance",
+      "subcategories": ["technical_guidance", "how_to", "troubleshooting", "best_practices"],
+      "workflow": "technical_guidance"
+    },
+    "jobs": {
+      "description": "Batch jobs, scheduled tasks, ETL processes, and automation workflows",
+      "subcategories": ["batch_failure", "etl_issue", "scheduler_problem", "automation_failure"],
+      "workflow": "jobs_investigation"
+    },
+    "sdlc": {
+      "description": "Software Development Lifecycle issues including CI/CD, builds, deployments, and releases",
+      "subcategories": ["build_failure", "deployment_issue", "pipeline_error", "release_problem"],
+      "workflow": "sdlc_support"
+    },
+    "database": {
+      "description": "Database-related issues including performance, connectivity, schema changes, and data access",
+      "subcategories": ["db_performance", "connection_issue", "schema_change", "query_optimization"],
+      "workflow": "database_support"
+    },
+    "cloud": {
+      "description": "Cloud infrastructure, services, scaling, networking, and resource management",
+      "subcategories": ["scaling_issue", "network_problem", "resource_limit", "service_config"],
+      "workflow": "cloud_support"
+    },
+    "ai": {
+      "description": "AI/ML model deployment, training, inference, and data science infrastructure",
+      "subcategories": ["model_deployment", "training_issue", "inference_problem", "data_pipeline"],
+      "workflow": "ai_support"
+    }
+  },
+  "training_examples": [
+    {
+      "text": "How do I set up automated testing in our CI/CD pipeline?",
+      "category": "query",
+      "subcategory": "how_to",
+      "priority": "low",
+      "reasoning": "General guidance request for CI/CD setup"
+    },
+    {
+      "text": "Nightly ETL job failed with timeout error",
+      "category": "jobs",
+      "subcategory": "etl_issue",
+      "priority": "high",
+      "reasoning": "ETL process failure affecting data pipeline"
+    },
+    {
+      "text": "Docker build is failing in the deployment pipeline",
+      "category": "sdlc",
+      "subcategory": "build_failure",
+      "priority": "medium",
+      "reasoning": "Build system preventing deployment"
+    },
+    {
+      "text": "PostgreSQL queries are running extremely slow",
+      "category": "database",
+      "subcategory": "db_performance",
+      "priority": "high",
+      "reasoning": "Database performance issue affecting applications"
+    },
+    {
+      "text": "Kubernetes cluster is hitting memory limits",
+      "category": "cloud",
+      "subcategory": "resource_limit",
+      "priority": "high",
+      "reasoning": "Cloud resource constraint affecting service availability"
+    },
+    {
+      "text": "ML model inference API is returning 500 errors",
+      "category": "ai",
+      "subcategory": "inference_problem",
+      "priority": "high",
+      "reasoning": "AI model serving issue affecting application functionality"
+    },
+    {
+      "text": "Data science training pipeline is stuck on feature extraction",
+      "category": "ai",
+      "subcategory": "data_pipeline",
+      "priority": "medium",
+      "reasoning": "ML data processing pipeline issue"
+    }
+  ]
+}

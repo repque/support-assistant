@@ -1,0 +1,80 @@
+{
+  "team_info": {
+    "name": "ATRS",
+    "description": "Athena Trade and Risk Services central support team",
+    "domain": "atrs"
+  },
+  "categories": {
+    "query": {
+      "description": "Technical questions or troubleshooting requests that can be resolved with guidance",
+      "subcategories": ["feed_issue", "trade_model", "code_usage", "how_is_it_done", "technical_guidance"],
+      "workflow": "technical_guidance"
+    },
+    "outage": {
+      "description": "System outages, service unavailability, or critical service disruptions",
+      "subcategories": ["system_down", "connectivity_issue", "service_unavailable"],
+      "workflow": "outage_investigation"
+    },
+    "data_issue": {
+      "description": "Data quality problems, reconciliation discrepancies, missing data, etc.",
+      "subcategories": ["data_quality", "reconciliation", "missing_data", "data_corruption"],
+      "workflow": "data_issue_resolution"
+    },
+    "bless_request": {
+      "description": "Requests for blessing of code changes, deployments, or production releases",
+      "subcategories": ["bless", "push", "deployment_approval"],
+      "workflow": "human_review_required",
+      "assistant_action": "skip"
+    },
+    "review_request": {
+      "description": "Requests for code review, architecture review, or technical documentation review",
+      "subcategories": ["review", "code_review", "architecture_review"],
+      "workflow": "human_review_required", 
+      "assistant_action": "skip"
+    }
+  },
+  "training_examples": [
+    {
+      "text": "Can you bless this code?",
+      "category": "bless_request",
+      "subcategory": "bless",
+      "priority": "medium",
+      "reasoning": "Request for production deployment approval"
+    },
+    {
+      "text": "Please review this code change",
+      "category": "review_request", 
+      "subcategory": "code_review",
+      "priority": "medium",
+      "reasoning": "Code review request for shared system component"
+    },
+    {
+      "text": "Trade settlement feed from clearing house stopped working",
+      "category": "query",
+      "subcategory": "feed_issue", 
+      "priority": "high",
+      "reasoning": "Technical feed issue requiring troubleshooting guidance"
+    },
+    {
+      "text": "Risk management system is completely down",
+      "category": "outage",
+      "subcategory": "system_down",
+      "priority": "critical", 
+      "reasoning": "Critical system outage affecting operations"
+    },
+    {
+      "text": "Position reconciliation showing $2M discrepancy",
+      "category": "data_issue",
+      "subcategory": "reconciliation",
+      "priority": "high",
+      "reasoning": "Significant data discrepancy requiring investigation"
+    },
+    {
+      "text": "How do I configure the trade booking API timeout settings?",
+      "category": "query",
+      "subcategory": "technical_guidance",
+      "priority": "low",
+      "reasoning": "Configuration guidance request"
+    }
+  ]
+}
