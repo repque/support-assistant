@@ -1,6 +1,6 @@
-# Multi-Team Classification Server
+# AI Production Support Assistant
 
-A production-ready Model Context Protocol (MCP) server that provides intelligent support request classification for multiple teams using end-to-end LLM sampling.
+A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues across multiple teams using Model Context Protocol (MCP) architecture.
 
 ## Quick Start
 
@@ -14,52 +14,43 @@ pip install -e .
 python run_tests.py
 ```
 
-### 3. Start Classification Server
+### 3. Start Support Assistant
 ```bash
-python -m mcp_servers.classification_server
+python -m support_agent.cli
 ```
 
-### 4. Use with MCP Client
-```python
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+### 4. Demo Mode
+```bash
+python -m support_agent.cli --demo
+```
 
-# Connect to classification server
-server_params = StdioServerParameters(
-    command="python", 
-    args=["-m", "mcp_servers.classification_server"]
-)
+### 5. Interactive Analysis
+```bash
+python -m support_agent.cli --interactive
+```
 
-async with stdio_client(server_params) as (read, write):
-    async with ClientSession(read, write) as session:
-        await session.initialize()
-        
-        # List available teams
-        teams = await session.call_tool("list_teams", {})
-        
-        # Get classification prompt for ATRS team
-        prompt = await session.call_tool("get_classification_prompt", {
-            "user_request": "Trade feed is down", 
-            "team": "atrs"
-        })
-        
-        # Process with your LLM, then classify
-        result = await session.call_tool("classify_support_request", {
-            "user_request": "Trade feed is down",
-            "team": "atrs", 
-            "llm_response": llm_response
-        })
+Example support request:
+```
+> My MarkitWire feed isn't sending outbound messages
+
+Classification: query/feed_issue (High Priority, 85% confidence)
+Resolution Steps:
+   1. Check feed status: SELECT * FROM trade_feeds WHERE feed_name = 'MarkitWire'
+   2. Verify connectivity: curl -H "Authorization: Bearer $TOKEN" https://api.markitwire.com/status
+   3. Review validation results and check downstream systems
+Confidence: 100% → Provides comprehensive guidance
+Performance: 5 tools, 3,500 tokens, 4.2 seconds
 ```
 
 ## Features
 
+✅ **Intelligent Analysis**: End-to-end support request analysis with confidence scoring  
 ✅ **Multi-Team Support**: ATRS and Core teams with distinct category sets  
-✅ **End-to-End LLM Sampling**: No pattern-matching fallbacks  
-✅ **Client-Side Processing**: Avoids server-initiated sampling deadlocks  
-✅ **Dynamic Configuration**: JSON-based team configurations  
-✅ **Team Management**: Discovery and introspection tools  
-✅ **Comprehensive Error Handling**: Graceful failure modes  
-✅ **Production Ready**: Fully tested with comprehensive test suite  
+✅ **Knowledge Integration**: Contextual recommendations from knowledge base  
+✅ **Health Monitoring**: System status checks and diagnostic guidance  
+✅ **Anti-Hallucination**: 60% confidence threshold with silent mode for uncertain cases  
+✅ **Client-Side LLM**: Avoids server-initiated sampling deadlocks  
+✅ **Production Ready**: Comprehensive error handling and full test coverage  
 
 ## Team Categories
 
@@ -78,31 +69,34 @@ async with stdio_client(server_params) as (read, write):
 - `cloud` - Cloud infrastructure and scaling
 - `ai` - AI/ML model deployment and inference
 
-## Available Tools
+## Core Capabilities
 
-1. **`classify_support_request`** - Classify requests by team with LLM
-2. **`get_classification_prompt`** - Generate team-specific prompts  
-3. **`list_teams`** - Discover available teams
-4. **`get_team_info`** - Get team details and descriptions
-5. **`get_team_categories`** - Get categories for specific team
-6. **`get_category_details`** - Get detailed category information
+1. **Support Request Analysis** - Comprehensive analysis with confidence scoring
+2. **Multi-Team Classification** - ATRS and Core team-specific categorization  
+3. **Knowledge Base Integration** - Contextual recommendations from documentation
+4. **Health Status Monitoring** - System status checks and diagnostics
+5. **Intelligent Decision Making** - Silent mode for low confidence scenarios
+6. **Performance Tracking** - Token usage and response time monitoring
 
 ## Architecture
 
 ```
+support_agent/
+├── assistant.py               # Main support assistant engine
+├── cli.py                    # Command-line interface
+├── config.py                 # Configuration management
+└── models.py                 # Pydantic data models
+
 mcp_servers/
 ├── categories/
 │   ├── atrs.json              # ATRS team configuration
 │   └── core.json              # Core team configuration  
-├── classification_server.py   # Multi-team classification server
-├── knowledge_server.py        # Knowledge base server
-└── health_server.py          # Health monitoring server
+├── classification_server.py   # Multi-team classification MCP server
+├── knowledge_server.py        # Knowledge base MCP server
+└── health_server.py          # Health monitoring MCP server
 
-support_agent/
-├── assistant.py               # Main support assistant
-├── cli.py                    # Command-line interface
-├── config.py                 # Configuration management
-└── models.py                 # Pydantic data models
+knowledge_resources/           # Knowledge base content
+└── test_*.py                 # Comprehensive test suite
 ```
 
 ## Testing

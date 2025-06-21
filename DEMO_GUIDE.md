@@ -1,8 +1,8 @@
-# Multi-Team Classification Server Demo Guide
+# AI Production Support Assistant Demo Guide
 
 ## Overview
 
-This demo showcases the production-ready Multi-Team Classification Server built using the Model Context Protocol (MCP). The system provides intelligent support request classification for multiple teams (ATRS and Core) using end-to-end LLM sampling without any pattern-matching fallbacks.
+This demo showcases the production-ready AI Production Support Assistant built using the Model Context Protocol (MCP). The system provides intelligent analysis and resolution recommendations for production support requests across multiple teams (ATRS and Core) using end-to-end LLM sampling with comprehensive anti-hallucination mechanisms.
 
 ## Installation & Setup
 
