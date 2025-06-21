@@ -19,14 +19,24 @@ python run_tests.py
 python -m support_agent.cli
 ```
 
-### 4. Demo Mode
+### 4. Demo Mode (Interactive)
 ```bash
-python -m support_agent.cli --demo
+python -m support_agent.cli demo
 ```
 
-### 5. Interactive Analysis
+### 5. Demo Mode (Automated Scenarios)
 ```bash
-python -m support_agent.cli --interactive
+python -m support_agent.cli demo --no-interactive
+```
+
+### 6. System Health Check
+```bash
+python -m support_agent.cli health
+```
+
+### 7. System Information
+```bash
+python -m support_agent.cli info
 ```
 
 Example support request:
