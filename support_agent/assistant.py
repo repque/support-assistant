@@ -499,27 +499,9 @@ class SupportAssistant:
                 knowledge_data = [knowledge_data]
             
             
-            # Step 4: Check system health if affected system specified
+            # Step 4: Skip system health checks - removed affected_system field
+            # System should infer what to check from the issue description if needed
             health_status = {}
-            if request.affected_system:
-                try:
-                    self._update_tool_call_status(f"Health(check_service_health)")
-                    health_result = await self.mcp_sessions["health"].call_tool(
-                        "check_service_health",
-                        {"service_name": request.affected_system}
-                    )
-                    # Estimate tokens
-                    self._total_tokens += self._estimate_tokens(request.affected_system)
-                    self._total_tokens += self._estimate_tokens(str(health_result))
-                    health_data = health_result.content[0].text
-                    if isinstance(health_data, str):
-                        import json
-                        health_status = json.loads(health_data)
-                    else:
-                        health_status = health_data
-                except Exception as e:
-                    print(f"⚠️ Health check failed: {e}")
-                    health_status = {"status": "unknown"}
             
             # Step 5: Calculate confidence score
             confidence_score = await self._calculate_confidence(
@@ -536,7 +518,7 @@ class SupportAssistant:
             
             # Step 7: Generate recommendations
             recommendations = await self._generate_recommendations(
-                classification, knowledge_data, health_status, request.issue_description, request.affected_system
+                classification, knowledge_data, health_status, request.issue_description
             )
             
             # If no knowledge-based recommendations, stay silent
@@ -633,7 +615,7 @@ class SupportAssistant:
         return min(score, 1.0)
     
     
-    async def _generate_recommendations(self, classification: Classification, knowledge_data, health_status, request_description: str, affected_system: str = None) -> str:
+    async def _generate_recommendations(self, classification: Classification, knowledge_data, health_status, request_description: str) -> str:
         """Generate intelligent recommendations based on retrieved knowledge.
         
         Uses the best matching knowledge base entry to generate contextual recommendations
@@ -646,7 +628,6 @@ class SupportAssistant:
             knowledge_data: List of knowledge base search results.
             health_status: System health information (currently unused but available).
             request_description: Original support request description.
-            affected_system: Optional system identifier for context.
         
         Returns:
             str: Generated recommendations with source attribution, or None if
@@ -664,7 +645,7 @@ class SupportAssistant:
                     {
                         "query": request_description,
                         "knowledge_content": best_result.get('content', ''),
-                        "affected_system": affected_system
+                        "affected_system": None
                     }
                 )
                 

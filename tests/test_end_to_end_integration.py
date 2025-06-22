@@ -41,7 +41,6 @@ async def test_end_to_end_integration():
                     engineer_sid="test-engineer",
                     request_id="E2E-001",
                     issue_description="Position reconciliation showing discrepancies in trade settlement reports",
-                    affected_system="reconciliation-service"
                 ),
                 "expected_category": "data_issue",
                 "should_respond": True
@@ -52,7 +51,6 @@ async def test_end_to_end_integration():
                     engineer_sid="test-engineer",
                     request_id="E2E-002", 
                     issue_description="Trade feed to MarkitWire is not working",
-                    affected_system="trade-feed-service"
                 ),
                 "expected_category": "query",
                 "should_respond": True
@@ -63,7 +61,6 @@ async def test_end_to_end_integration():
                     engineer_sid="test-engineer",
                     request_id="E2E-003",
                     issue_description="Please review this code change for the risk calculation",
-                    affected_system="risk-engine"
                 ),
                 "expected_category": "review_request",
                 "should_respond": False
@@ -74,7 +71,6 @@ async def test_end_to_end_integration():
                     engineer_sid="test-engineer",
                     request_id="E2E-004",
                     issue_description="Something is broken",
-                    affected_system=None
                 ),
                 "expected_category": None,
                 "should_respond": False

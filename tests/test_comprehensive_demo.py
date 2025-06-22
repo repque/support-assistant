@@ -43,7 +43,6 @@ async def run_comprehensive_demo():
                     engineer_sid="john.smith",
                     request_id="DEMO-001",
                     issue_description="Position reconciliation showing $2M discrepancy between trading system and risk management platform for APAC portfolios",
-                    affected_system="reconciliation-service",
                     lob="trading"
                 ),
                 "expected_behavior": "Should classify as data_issue with high confidence and provide detailed resolution steps"
@@ -55,7 +54,6 @@ async def run_comprehensive_demo():
                     engineer_sid="jane.doe",
                     request_id="DEMO-002",
                     issue_description="Risk management system is completely down, all traders unable to view positions or P&L",
-                    affected_system="risk-engine",
                     lob="trading"
                 ),
                 "expected_behavior": "Should classify as outage with critical priority"
@@ -67,7 +65,6 @@ async def run_comprehensive_demo():
                     engineer_sid="alex.chen",
                     request_id="DEMO-003",
                     issue_description="Please review and approve this code change for the credit risk calculation engine",
-                    affected_system="credit-risk-engine",
                     lob="risk"
                 ),
                 "expected_behavior": "Should stay silent - review requests require human intervention"
@@ -79,7 +76,6 @@ async def run_comprehensive_demo():
                     engineer_sid="mike.wilson",
                     request_id="DEMO-004",
                     issue_description="PostgreSQL queries on the analytics database are taking 30+ seconds, causing timeouts in the reporting dashboard",
-                    affected_system="analytics-db",
                     lob="platform"
                 ),
                 "expected_behavior": "Should classify as database issue with performance guidance"
@@ -91,7 +87,6 @@ async def run_comprehensive_demo():
                     engineer_sid="sarah.jones",
                     request_id="DEMO-005",
                     issue_description="Kubernetes cluster is hitting memory limits, pods are being evicted during peak trading hours",
-                    affected_system="k8s-prod-cluster",
                     lob="infrastructure"
                 ),
                 "expected_behavior": "Should classify as cloud/scaling issue with critical priority"
@@ -103,7 +98,6 @@ async def run_comprehensive_demo():
                     engineer_sid="test.user",
                     request_id="DEMO-006",
                     issue_description="Something is broken, please help",
-                    affected_system=None,
                     lob="unknown"
                 ),
                 "expected_behavior": "Should stay silent due to low confidence (vague request)"
@@ -123,7 +117,6 @@ async def run_comprehensive_demo():
             table.add_row("Engineer", request.engineer_sid)
             table.add_row("Request ID", request.request_id)
             table.add_row("Description", request.issue_description)
-            table.add_row("System", request.affected_system or "N/A")
             table.add_row("LOB", request.lob)
             console.print(table)
             

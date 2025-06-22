@@ -183,17 +183,14 @@ async def run_sample_demo(config: MCPConfig):
     sample_issues = [
         {
             "description": "Data reconciliation shows discrepancies in position reports",
-            "system": "reconciliation-service",
             "demo_type": "High Confidence Analysis"
         },
         {
             "description": "Can you please review this trade for compliance approval?",
-            "system": "trade-booking-service", 
             "demo_type": "Human Review Required"
         },
         {
             "description": "I need help with this thing",
-            "system": None,
             "demo_type": "Low Confidence - Stays Silent"
         }
     ]
@@ -216,7 +213,6 @@ async def run_sample_demo(config: MCPConfig):
                 engineer_sid="demo-engineer",
                 request_id=f"DEMO-{i:03d}",
                 issue_description=issue["description"],
-                affected_system=issue["system"],
                 lob="platform"
             )
             
@@ -226,8 +222,6 @@ async def run_sample_demo(config: MCPConfig):
                 title="[bold cyan]User Query[/bold cyan]",
                 style="cyan"
             ))
-            
-            console.print(f"[bold]Affected System:[/bold] {issue['system'] or 'N/A'}")
             
             # Wait before analyzing
             await asyncio.sleep(5)
@@ -314,15 +308,11 @@ async def run_interactive_demo(engineer_id: str, lob: str, config: MCPConfig):
                 console.print("\nThanks for using the Support Agent demo!")
                 break
             
-            # Get additional context
-            affected_system = Prompt.ask("Affected system", default="")
-            
             # Create support request
             request = SupportRequest(
                 engineer_sid=engineer_id,
                 request_id=f"REQ-{datetime.now().strftime('%Y%m%d%H%M%S')}",
                 issue_description=issue_description,
-                affected_system=affected_system if affected_system else None,
                 lob=lob
             )
             

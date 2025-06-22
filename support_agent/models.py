@@ -22,13 +22,11 @@ class SupportRequest(BaseModel):
         engineer_sid: Unique identifier for the requesting engineer.
         request_id: Unique identifier for this specific request.
         issue_description: Detailed description of the problem or question.
-        affected_system: Optional identifier of the system experiencing issues.
         lob: Line of business (default: "platform") for organizational routing.
     """
     engineer_sid: str
     request_id: str
     issue_description: str
-    affected_system: Optional[str] = None
     lob: str = "platform"  # line of business
 
 
