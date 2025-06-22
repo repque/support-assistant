@@ -80,7 +80,7 @@ Performance: 6 tools, 5.9k tokens, 6.8 seconds
 5. **Silent Mode Decision Making** - Uses LLM to determine when to defer to humans
 
 ## Architecture
-
+```
 support_agent/
 ├── assistant.py              # Main orchestrator
 ├── cli.py                    # Command-line interface, interactive testbed
@@ -102,6 +102,7 @@ knowledge_resources/           # Collection of knowledge assets
 
 tests/
 └── test_functional.py         # Comprehensive functional tests
+```
 
 ## Key Architectural Decisions
 
