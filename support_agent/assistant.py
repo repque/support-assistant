@@ -427,7 +427,7 @@ class SupportAssistant:
                 "get_classification_prompt",
                 {
                     "user_request": request.issue_description,
-                    "team": "atrs"  # Default to ATRS team for backward compatibility
+                    "team": os.getenv("DEFAULT_TEAM", "atrs")  # Configurable team selection
                 }
             )
             prompt = prompt_result.content[0].text if prompt_result.content else ""

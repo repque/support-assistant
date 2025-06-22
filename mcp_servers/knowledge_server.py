@@ -308,8 +308,9 @@ Respond with JSON: {
             for idx in top_indices:
                 similarity_score = float(similarities[idx])
                 
-                # Only include results above relevance threshold
-                if similarity_score > 0.2:
+                # Only include results above configurable relevance threshold
+                min_relevance = float(os.getenv("MIN_RELEVANCE_THRESHOLD", "0.2"))
+                if similarity_score > min_relevance:
                     section = self.sections[idx].copy()
                     section_text = f"{section['section_title']} {section['content']}".lower()
                     
