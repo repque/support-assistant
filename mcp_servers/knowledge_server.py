@@ -182,8 +182,13 @@ class VectorKnowledgeBase:
                         "section_path": section_path
                     }
                     
-                    # Generate embedding for section title + content (limit for efficiency)
-                    text_to_embed = f"{section_title} {section_content[:1000]}"
+                    # Generate embedding for content only (no filename contamination)
+                    # Remove document name from section title for embedding
+                    clean_section_title = section_title.split(" > ", 1)[-1] if " > " in section_title else section_title
+                    if clean_section_title == doc_name:  # If it's just the document name, use content only
+                        text_to_embed = section_content[:1000]
+                    else:
+                        text_to_embed = f"{clean_section_title} {section_content[:1000]}"
                     embedding = self.embeddings_model.encode(text_to_embed)
                     
                     self.sections.append(section)
