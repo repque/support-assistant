@@ -610,9 +610,11 @@ class SupportAssistant:
         """
         if not knowledge_data or not isinstance(knowledge_data, list) or depth <= 0:
             return knowledge_data
-            
-        current_level_data = list(knowledge_data)  # Start with current knowledge
-        all_enhanced_data = list(knowledge_data)   # Accumulate all results
+        
+        # Create deep copies to prevent cross-request state contamination    
+        import copy
+        current_level_data = copy.deepcopy(knowledge_data)  # Start with clean copy
+        all_enhanced_data = copy.deepcopy(knowledge_data)   # Accumulate all results
         
         for current_depth in range(depth):
             # Identify gaps in the current level knowledge
