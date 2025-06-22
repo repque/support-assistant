@@ -1,6 +1,6 @@
 # AI Production Support Assistant
 
-A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues using Model Context Protocol (MCP) architecture and vector-based semantic search.
+A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues using Model Context Protocol (MCP) architecture, section-level semantic search, and context-aware recursive knowledge retrieval.
 
 ## Quick Start
 
@@ -62,51 +62,41 @@ Performance: 6 tools, 5.9k tokens, 6.8 seconds
 
 ## Key Features
 
-✅ **Context-Aware Analysis**: Skips redundant steps based on user's stated facts  
-✅ **Vector-Based Search**: Semantic search using sentence transformers for knowledge retrieval  
-✅ **Generic Feed Support**: Intelligent parameter substitution for any feed type (MarkitWire, DCPP, XODS, Bloomberg, etc.)  
-✅ **LLM-Based Decisions**: No hardcoded business logic - all decisions made by LLM  
-✅ **Multi-Team Support**: ATRS team with extensible architecture  
-✅ **Silent Mode**: Stays silent when no relevant knowledge is available  
-✅ **Production Ready**: Comprehensive error handling and robust architecture  
-
-## Team Categories
-
-### ATRS Team (Financial Services)
-- `query` - Technical questions and troubleshooting
-- `outage` - System outages and service disruptions  
-- `data_issue` - Data quality and reconciliation problems
-- `bless_request` - Code deployment approvals (deferred to human review)
-- `review_request` - Code and architecture reviews (deferred to human review)
+- **Context-Aware Analysis**: Skips redundant steps based on user's stated facts  
+- **Section-Level Search**: Granular semantic search at markdown section level for precise results  
+- **DFS Knowledge Retrieval**: Context-aware recursive searches to find implementation details  
+- **Generic Feed Support**: Intelligent parameter substitution for any feed type (MarkitWire, DCPP, XODS, etc.)  
+- **LLM-Based Decisions**: No hardcoded business logic - all decisions made by LLM  
+- **Configurable**: All LLM parameters, timeouts, and network settings configurable via environment variables  
+- **Silent Mode**: Stays silent when no relevant knowledge is available  
 
 ## Core Capabilities
 
-1. **Intelligent Request Analysis** - Context-aware analysis with vector search
-2. **Generic Feed Troubleshooting** - Works with any feed type without hardcoding  
-3. **Vector Knowledge Search** - Semantic similarity search across knowledge base
-4. **LLM-Based Gap Detection** - Identifies missing implementation details and searches recursively
-5. **Smart Parameter Substitution** - Adapts code examples to user's specific context
-6. **Silent Mode Decision Making** - Uses LLM to determine when to defer to humans
+1. **Intelligent Request Analysis** - Context-aware analysis with section-level vector search
+2. **Section-Level Knowledge Search** - Semantic similarity search at granular section level
+3. **DFS Gap Detection** - Context-aware recursive searches for missing implementation details
+4. **Smart Parameter Substitution** - Adapts code examples to user's specific context
+5. **Silent Mode Decision Making** - Uses LLM to determine when to defer to humans
 
 ## Architecture
 
 ```
 support_agent/
-├── assistant.py               # Main orchestrator with vector search integration
-├── cli.py                    # Command-line interface
+├── assistant.py              # Main orchestrator
+├── cli.py                    # Command-line interface / interactive testbed
 ├── config.py                 # Configuration management
 └── models.py                 # Pydantic data models
 
 mcp_servers/
 ├── categories/
-│   └── atrs.json              # ATRS team configuration
-├── classification_server.py   # LLM-based classification server
-├── knowledge_server.py        # Vector search knowledge server
-└── health_server.py          # Health monitoring server
+│   └── atrs.json              # Team-specific configuration
+├── classification_server.py   # LLM-based classification / triage server
+├── knowledge_server.py        # Vector search knowledge provider
+└── health_server.py           # Health monitoring server (extension point)
 
-knowledge_resources/           # Generic knowledge base
-├── trade_feed_troubleshooting.md      # Generic feed troubleshooting
-├── feed_framework_troubleshooting.md  # Feed framework commands
+knowledge_resources/           # Collection of knowledge assets
+├── markitwire_feed_troubleshooting.md  # MarkitWire feed troubleshooting
+├── feed_framework_troubleshooting.md   # Feed framework commands
 ├── data_reconciliation.md              # Data issue procedures
 └── outage_investigation.md             # Outage response procedures
 
@@ -119,19 +109,16 @@ tests/
 ### 1. **Vector Embeddings for Knowledge Search**
 - Uses `sentence-transformers` with `all-MiniLM-L6-v2` model
 - Server-side semantic search with cosine similarity
-- No fallback to keyword matching - requires proper vector search
 
 ### 2. **LLM-Based Decision Making**
 - Request handling decisions made by LLM analysis
-- Gap detection uses LLM to find missing implementation details
+- Gap detection uses LLM to find missing implementation details and can search deeper
 - Context awareness through intelligent prompt engineering
-- No hardcoded business logic anywhere in the system
 
 ### 3. **Generic Knowledge Base**
-- All knowledge files use parameterized examples (`feedType`, `dealName`)
-- LLM intelligently substitutes parameters based on user context
-- Works with any feed type: MarkitWire, DCPP, XODS, Bloomberg, Reuters, etc.
-- No feed-type-specific hardcoded knowledge
+- Knowledge files should use parameterized examples (`feedType`, `dealName`)
+- LLM can substitute parameters based on user context
+
 
 ### 4. **Client-Side LLM Pattern**
 ```mermaid
@@ -145,17 +132,30 @@ sequenceDiagram
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.9+
 - OpenAI or Anthropic API key for LLM processing
 - `sentence-transformers` for vector embeddings
 - `numpy>=1.26.4,<2.0` (for vector compatibility)
 
 ## Environment Variables
 
+### Required
 ```bash
 export OPENAI_API_KEY="your-openai-key"
-# OR
-export ANTHROPIC_API_KEY="your-anthropic-key"
+```
+
+### Optional Configuration
+```bash
+# LLM Configuration
+export LLM_DEFAULT_MODEL="gpt-4o-mini"        # Default: gpt-4o-mini
+export LLM_TEMPERATURE="0.3"                  # Default: 0.3
+export LLM_MAX_TOKENS="1000"                  # Default: 1000
+export LLM_TIMEOUT="30.0"                     # Default: 30.0 seconds
+export LLM_API_BASE="https://api.openai.com/v1"  # Optional: custom API endpoint
+
+# Network Configuration
+export MCP_HOST="127.0.0.1"                   # Default: localhost
+export MCP_PORT_BASE="8000"                   # Default: 8000 (servers use 8001, 8002, 8003)
 ```
 
 ## Testing
@@ -163,27 +163,27 @@ export ANTHROPIC_API_KEY="your-anthropic-key"
 The system includes comprehensive functional tests:
 
 - **CLI Integration Tests** - Tests all CLI commands end-to-end
-- **Vector Search Tests** - Verifies semantic search functionality  
+- **Section-Level Search Tests** - Verifies granular semantic search functionality  
 - **Context Awareness Tests** - Tests parameter substitution and context handling
 - **Human Review Detection** - Tests LLM-based decision making
-- **Generic Feed Support** - Tests feed type substitution across different feeds
+- **Generic Params Support** - Tests feed type substitution across different feeds
 
 Run tests: `python -m pytest tests/ -v`
 
 ## Configuration
 
 ### Knowledge Search Depth
-Control recursive knowledge search depth:
+Control context-aware recursive knowledge search depth:
 ```bash
-python -m support_agent.cli demo --search-depth 2  # Recursive search
+python -m support_agent.cli demo --search-depth 2  # DFS recursive search
 python -m support_agent.cli demo --search-depth 1  # Single-level (default)
 ```
 
 ### Adding New Knowledge
 1. Create markdown file in `knowledge_resources/`
 2. Use clear header structure (# ## ### for hierarchical sections)
-3. Use parameterized examples with `feedType`, `dealName`, etc.
-4. System automatically indexes sections on startup
+3. Use parameterized code examples with `feedType`, `dealName`, etc.
+4. System automatically parses sections and creates embeddings on startup
 
 ### Example Knowledge File
 ```markdown
@@ -192,7 +192,7 @@ python -m support_agent.cli demo --search-depth 1  # Single-level (default)
 ## Commands
 ```python
 deal = ro(dealName)
-fs = deal.FeedState(feedType)  # Use specific feed name like "DCPP", "Bloomberg"
+fs = deal.FeedState(feedType)  # Use specific feed name like "DCPP", "XODS", etc.
 fs.FeedStatus()
 ```
 
@@ -202,5 +202,4 @@ The LLM will automatically substitute `feedType` with the actual feed type from 
 
 - [DESIGN.md](DESIGN.md) - System architecture and design decisions
 - [DEMO_GUIDE.md](DEMO_GUIDE.md) - Demo walkthrough guide  
-- [TESTING.md](TESTING.md) - Testing guide and documentation
 - [simplified_flow_diagram.md](simplified_flow_diagram.md) - System flow overview
