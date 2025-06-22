@@ -276,21 +276,28 @@ AFFECTED SYSTEM: {affected_system or 'Not specified'}
 KNOWLEDGE BASE CONTENT:
 {knowledge_content}
 
+CRITICAL INSTRUCTIONS:
+1. ONLY use commands, code, or procedures that are EXPLICITLY shown in the knowledge base content above
+2. DO NOT invent, create, or suggest any code that is not directly copied from the knowledge base
+3. If the knowledge base mentions a concept without providing the exact code, acknowledge this limitation
+4. When referencing code, copy it EXACTLY as shown in the knowledge base
+
 Based on the user's specific issue and the knowledge base content, provide a concise response with:
 
 ## Immediate Actions
-- List 3-4 specific steps directly relevant to this exact issue
-- Include specific commands or queries from the knowledge base
+- List specific steps using ONLY information from the knowledge base
+- Include ONLY the exact commands/code provided in the knowledge base
+- If a step is mentioned but no code is provided, say "Manual check required - specific command not provided"
 
 ## Expected Results
 - What to look for when executing these steps
 - Key indicators of success or failure
 
 ## Next Steps
-- When to escalate and to whom
+- When to escalate and to whom (as specified in the knowledge base)
 - Follow-up actions if initial steps don't resolve the issue
 
-Focus only on what's directly relevant to this specific issue. Be concise and actionable."""
+Remember: Never make up code or commands. Only use what's explicitly provided in the knowledge base content."""
 
 def _calculate_resource_relevance(resource: Dict, query: str, category: Optional[str] = None) -> float:
     """Calculate relevance score for a knowledge resource.
