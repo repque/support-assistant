@@ -283,42 +283,43 @@ async def run_interactive_demo(engineer_id: str, lob: str, config: MCPConfig):
         config: MCP configuration for server connections.
     """
     
-    assistant = SupportAssistant(config)
+    conversation_id = f"demo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     
-    # Start MCP servers
-    success = await assistant.start_mcp_servers()
-    if not success:
-        console.print("[red]ERROR: Failed to start MCP servers for demo[/red]")
-        return
+    console.print(f"\nWelcome {engineer_id}! Starting new analysis session...")
+    console.print(f"Session ID: {conversation_id}")
+    console.print(f"Line of Business: {lob}")
     
-    try:
-        conversation_id = f"demo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    while True:
+        console.print("\n" + "="*60)
         
-        console.print(f"\nWelcome {engineer_id}! Starting new analysis session...")
-        console.print(f"Session ID: {conversation_id}")
-        console.print(f"Line of Business: {lob}")
+        # Get issue description from user
+        issue_description = Prompt.ask(
+            "\n[bold yellow]Describe the issue you're investigating[/bold yellow]\n"
+            "[dim](or type 'quit' to exit)[/dim]"
+        )
         
-        while True:
-            console.print("\n" + "="*60)
-            
-            # Get issue description from user
-            issue_description = Prompt.ask(
-                "\n[bold yellow]Describe the issue you're investigating[/bold yellow]\n"
-                "[dim](or type 'quit' to exit)[/dim]"
-            )
-            
-            if issue_description.lower() in ['quit', 'exit', 'q']:
-                console.print("\nThanks for using the Support Agent demo!")
-                break
-            
-            # Create support request
-            request = SupportRequest(
-                engineer_sid=engineer_id,
-                request_id=f"REQ-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                issue_description=issue_description,
-                lob=lob
-            )
-            
+        if issue_description.lower() in ['quit', 'exit', 'q']:
+            console.print("\nThanks for using the Support Agent demo!")
+            break
+        
+        # Create support request
+        request = SupportRequest(
+            engineer_sid=engineer_id,
+            request_id=f"REQ-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            issue_description=issue_description,
+            lob=lob
+        )
+        
+        # Create fresh assistant instance for each request to prevent state persistence
+        assistant = SupportAssistant(config)
+        
+        # Start MCP servers
+        success = await assistant.start_mcp_servers()
+        if not success:
+            console.print("[red]ERROR: Failed to start MCP servers for this request[/red]")
+            continue
+        
+        try:
             # Analyze the request
             console.print(f"\n[bold yellow]⏺ Analyzing support request[/bold yellow]")
             
@@ -359,9 +360,10 @@ async def run_interactive_demo(engineer_id: str, lob: str, config: MCPConfig):
             if continue_session.lower() == "no":
                 console.print("\nThanks for using the Support Agent demo!")
                 break
-    
-    finally:
-        await assistant.stop_mcp_servers()
+        
+        finally:
+            # Clean up MCP servers for this request
+            await assistant.stop_mcp_servers()
 
 
 async def display_analysis_results(result: dict):
