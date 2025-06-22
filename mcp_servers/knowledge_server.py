@@ -281,6 +281,7 @@ CRITICAL INSTRUCTIONS:
 2. DO NOT invent, create, or suggest any code that is not directly copied from the knowledge base
 3. If the knowledge base mentions a concept without providing the exact code, acknowledge this limitation
 4. When referencing code, copy it EXACTLY as shown in the knowledge base
+5. If additional information is provided from follow-up searches, incorporate that knowledge into your response
 
 Based on the user's specific issue and the knowledge base content, provide a concise response with:
 

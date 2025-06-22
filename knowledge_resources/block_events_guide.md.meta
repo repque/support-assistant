@@ -1,0 +1,7 @@
+{
+  "title": "Block Events Investigation Guide",
+  "category": "query",
+  "subcategory": "feed_issue",
+  "keywords": ["block events", "blocks", "feed blocked", "BlockEvents", "_BlockEvents", "validation block"],
+  "description": "Guide for investigating and resolving block events that prevent trade feeds"
+}

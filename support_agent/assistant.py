@@ -503,9 +503,14 @@ class SupportAssistant:
             # System should infer what to check from the issue description if needed
             health_status = {}
             
+            # Step 4.5: Perform follow-up knowledge searches for gaps
+            enhanced_knowledge_data = await self._enhance_knowledge_with_followup_searches(
+                knowledge_data, request.issue_description
+            )
+            
             # Step 5: Calculate confidence score
             confidence_score = await self._calculate_confidence(
-                classification, knowledge_data, health_status
+                classification, enhanced_knowledge_data, health_status
             )
             
             # Step 6: Check confidence threshold
@@ -518,7 +523,7 @@ class SupportAssistant:
             
             # Step 7: Generate recommendations
             recommendations = await self._generate_recommendations(
-                classification, knowledge_data, health_status, request.issue_description
+                classification, enhanced_knowledge_data, health_status, request.issue_description
             )
             
             # If no knowledge-based recommendations, stay silent
@@ -615,6 +620,102 @@ class SupportAssistant:
         return min(score, 1.0)
     
     
+    async def _enhance_knowledge_with_followup_searches(self, initial_knowledge_data, user_request: str):
+        """Perform follow-up searches to fill knowledge gaps.
+        
+        Analyzes the initial knowledge results to identify concepts that are mentioned
+        but lack implementation details (e.g., "check block events" without code).
+        Then performs targeted follow-up searches to find that missing information.
+        
+        Args:
+            initial_knowledge_data: Initial knowledge search results.
+            user_request: Original user request for context.
+            
+        Returns:
+            Enhanced knowledge data combining initial and follow-up search results.
+        """
+        if not initial_knowledge_data or not isinstance(initial_knowledge_data, list):
+            return initial_knowledge_data
+            
+        # Identify gaps in the knowledge
+        gaps_to_search = []
+        
+        for item in initial_knowledge_data:
+            if not isinstance(item, dict):
+                continue
+                
+            content = item.get("content", "").lower()
+            
+            # Look for specific mentions that need more detail
+            # Specifically looking for "block events" which we know has a detailed guide
+            if "check block events" in content or "check if there are any block events" in content:
+                # Check if there's already code for block events in this content
+                if "_blockevents" not in content.lower() and "block_events" not in content.lower():
+                    gaps_to_search.append("block events")
+            
+            # Look for other common gaps
+            if "check eligibility" in content and "ineligibilityreasons" not in content:
+                gaps_to_search.append("eligibility IneligibilityReasons")
+                
+            if "compare values in athena" in content and not any(code in content for code in ["select", "query", "sql"]):
+                gaps_to_search.append("Athena query examples")
+        
+        # Debug: print what gaps we found (commented out for production)
+        # if gaps_to_search:
+        #     print(f"\nIdentified knowledge gaps to search: {gaps_to_search}")
+        
+        # Perform follow-up searches for identified gaps
+        enhanced_data = list(initial_knowledge_data)  # Start with initial data
+        
+        for gap_concept in gaps_to_search[:2]:  # Limit to 2 follow-up searches to avoid token explosion
+            try:
+                self._update_tool_call_status(f"Knowledge(follow-up: {gap_concept[:30]}...)")
+                
+                # Search specifically for the gap concept
+                follow_up_results = await self.mcp_sessions["knowledge"].call_tool(
+                    "search_knowledge",
+                    {
+                        "query": gap_concept,
+                        "max_results": 1  # Just get the best match
+                    }
+                )
+                
+                # Estimate tokens
+                self._total_tokens += self._estimate_tokens(gap_concept)
+                self._total_tokens += self._estimate_tokens(str(follow_up_results))
+                
+                follow_up_data = follow_up_results.content[0].text
+                if isinstance(follow_up_data, str):
+                    import json
+                    try:
+                        follow_up_data = json.loads(follow_up_data)
+                    except:
+                        continue
+                
+                # Add follow-up results if they're relevant and not duplicates
+                if isinstance(follow_up_data, list):
+                    for item in follow_up_data:
+                        if isinstance(item, dict) and item.get("relevance_score", 0) > 0.5:
+                            # Check if this isn't already in our results
+                            is_duplicate = any(
+                                existing.get("source") == item.get("source") 
+                                for existing in enhanced_data 
+                                if isinstance(existing, dict)
+                            )
+                            if not is_duplicate:
+                                # Mark this as a follow-up result
+                                item["is_followup"] = True
+                                item["searched_for"] = gap_concept
+                                enhanced_data.append(item)
+                                
+            except Exception as e:
+                # If follow-up search fails, continue with what we have
+                print(f"Follow-up search failed for '{gap_concept}': {e}")
+                continue
+        
+        return enhanced_data
+    
+    
     async def _generate_recommendations(self, classification: Classification, knowledge_data, health_status, request_description: str) -> str:
         """Generate intelligent recommendations based on retrieved knowledge.
         
@@ -635,8 +736,24 @@ class SupportAssistant:
         """
         
         if isinstance(knowledge_data, list) and len(knowledge_data) > 0:
-            # Use the best knowledge result
-            best_result = max(knowledge_data, key=lambda x: x.get("relevance_score", 0))
+            # Separate primary and follow-up results
+            primary_results = [item for item in knowledge_data if not item.get("is_followup", False)]
+            followup_results = [item for item in knowledge_data if item.get("is_followup", False)]
+            
+            # Use the best primary result as the main content
+            best_result = max(primary_results, key=lambda x: x.get("relevance_score", 0)) if primary_results else knowledge_data[0]
+            
+            # Combine knowledge content if we have follow-up results
+            combined_content = best_result.get('content', '')
+            
+            if followup_results:
+                combined_content += "\n\n## Additional Information from Follow-up Searches:\n"
+                combined_content += "(The following information was found by searching for concepts mentioned above that lacked implementation details)\n"
+                for followup in followup_results:
+                    searched_concept = followup.get("searched_for", "Unknown")
+                    combined_content += f"\n### Additional Details for: {searched_concept}\n"
+                    combined_content += followup.get('content', '')
+                    combined_content += "\n"
             
             try:
                 # Get the analysis prompt from knowledge server
@@ -644,7 +761,7 @@ class SupportAssistant:
                     "prepare_analysis_prompt",
                     {
                         "query": request_description,
-                        "knowledge_content": best_result.get('content', ''),
+                        "knowledge_content": combined_content,
                         "affected_system": None
                     }
                 )
@@ -676,10 +793,18 @@ class SupportAssistant:
                     llm_response = str(llm_result.content)
                     self._total_tokens += self._estimate_tokens(llm_response)
                 
+                # Build source attribution
+                source_text = f"Primary Source: {best_result.get('source', 'Unknown')} (Relevance: {best_result.get('relevance_score', 0)*100:.0f}%)"
+                
+                if followup_results:
+                    source_text += "\nAdditional Sources:"
+                    for followup in followup_results:
+                        source_text += f"\n- {followup.get('source', 'Unknown')} (searched for: {followup.get('searched_for', 'Unknown')})"
+                
                 return f"""{llm_response}
 
 ---
-Source: {best_result.get('source', 'Unknown')} (Relevance: {best_result.get('relevance_score', 0)*100:.0f}%)
+{source_text}
 *Analysis generated using LLM processing*"""
                 
             except Exception as e:
