@@ -26,13 +26,17 @@ sequenceDiagram
     end
     
     rect rgb(248, 255, 248)
-        Note over Assistant,HealthServer: VECTOR SEARCH & LLM DECISION
-        Assistant->>KnowServer: Vector search with embeddings
-        KnowServer-->>Assistant: Semantic matches from knowledge base
+        Note over Assistant,HealthServer: SECTION-LEVEL SEARCH & DFS RETRIEVAL
+        Assistant->>KnowServer: Section-level vector search
+        KnowServer-->>Assistant: Top relevant sections from knowledge base
+        Assistant->>LLM: Identify knowledge gaps in sections
+        LLM-->>Assistant: Gap: "check block events" needs implementation
+        Assistant->>KnowServer: DFS search for "check block events"
+        KnowServer-->>Assistant: Section with ds.evInfo() code found
         Assistant->>HealthServer: Check system health
         HealthServer-->>Assistant: Service status
         Assistant->>LLM: Should assistant handle this request?
-        LLM-->>Assistant: Yes - relevant knowledge available
+        LLM-->>Assistant: Yes - comprehensive knowledge available
     end
     
     rect rgb(255, 248, 240)
@@ -140,11 +144,10 @@ Performance: 6 tools, 5,900 tokens, 6.8 seconds
 
 ## **Key Success Factors**
 
-- ✅ **Vector Embeddings**: Semantic search with sentence-transformers, no keyword fallbacks
-- ✅ **Context Awareness**: Skips redundant steps based on user's stated facts
-- ✅ **Generic Feed Support**: Works with any feed type through intelligent parameter substitution
-- ✅ **LLM-Based Decisions**: All logic decisions made by LLM, no hardcoded business rules
-- ✅ **Gap Detection**: Recursively searches for missing implementation details
-- ✅ **Smart Silence**: Won't respond to vague requests or review requests
-- ✅ **Real LLM**: Uses actual OpenAI/Anthropic APIs, no mocking
-- ✅ **Multi-Team**: Handles both ATRS and Core teams
+- **Vector Embeddings**: Semantic search with sentence-transformers
+- **Context Awareness**: Skips redundant steps based on user's stated facts
+- **Generic Feed Support**: Works with any feed type through intelligent parameter substitution
+- **LLM-Based Decisions**: All logic decisions made by LLM
+- **Gap Detection**: Recursively searches for missing implementation details
+- **Smart Silence**: Won't respond to vague requests or categories marked for direct escalation (ex: bless requests)
+- **Multi-Team**: Can be configured for use by multiple teams, with team-specific categories

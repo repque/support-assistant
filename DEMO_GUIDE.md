@@ -38,8 +38,8 @@ python -m support_agent.cli demo
 Interactive session where you can test any support requests:
 - Try: `"MarkitWire feed issue"`
 - Try: `"DCPP feed not working"`  
-- Try: `"my trade has book2 resolved to 'Bloomberg' but validation failed"`
-- Try: `"Can you review this code for compliance?"`
+- Try: `"my trade has book2 resolved to 'MarkitWiere' but validation failed"`
+- Try: `"Can you review this code https://my.code.com/sdlc/12345?"`
 
 ### 3. System Health Check
 ```bash
@@ -75,7 +75,6 @@ python -m support_agent.cli demo --connection sse
 ### 2. **Generic Feed Support** 
 **Demo**: Try with different feed types:
 - `"DCPP feed issue"` → Provides `FeedState("DCPP")` code
-- `"Bloomberg feed problem"` → Provides `FeedState("Bloomberg")` code  
 - `"XODS feed status"` → Provides `FeedState("XODS")` code
 
 **Shows**:
@@ -89,17 +88,15 @@ python -m support_agent.cli demo --connection sse
 **Shows**:
 - Semantic search finds relevant knowledge using vector embeddings
 - Server-side similarity search with cosine distance
-- Provides implementation details: `ds.evInfo()` for block events
-- No keyword matching fallbacks - pure semantic understanding
+- Provides implementation details: `ds.evInfo()` for listing downstream events
 
 ### 4. **LLM-Based Decision Making**
-**Demo**: `"Can you please review this trade for compliance approval?"`
+**Demo**: `"Can you please check this trade for compliance approval?"`
 
 **Shows**:
 - LLM analyzes request content to determine if human review needed
 - No hardcoded categories for review detection
-- Graceful deferral to human experts for compliance matters
-- Intelligent classification without pattern matching
+- Graceful deferral to human experts
 
 ### 5. **Silent Mode Intelligence**
 **Demo**: `"I need help with this thing"`
@@ -108,7 +105,6 @@ python -m support_agent.cli demo --connection sse
 - System stays silent when no relevant knowledge available
 - Graceful error handling for vague or incomplete requests
 - No unhelpful "I don't know" responses
-- Professional failure mode for production use
 
 ### 6. **Recursive Knowledge Enhancement**
 **Demo**: Enable with `--search-depth 2`
@@ -136,8 +132,9 @@ python -m support_agent.cli demo --connection sse
 ### Knowledge Base
 - **Format**: Pure markdown with section-level indexing
 - **Parameterization**: Generic examples using `feedType`, `dealName` variables
-- **Content**: Feed troubleshooting, data reconciliation, outage procedures
+- **Content**: Feed troubleshooting, data reconciliation, outage procedures, etc.
 - **Updates**: Automatic section parsing and indexing of new knowledge files
+- **Search**: Section-level embeddings with DFS recursive knowledge retrieval
 
 ## Demo Scenarios Walkthrough
 
@@ -146,21 +143,20 @@ python -m support_agent.cli demo --connection sse
 Input: "Data reconciliation shows discrepancies in position reports"
 
 Output:
-✅ Classification: data_issue/reconciliation (High Priority, 80% confidence)
-✅ Provides specific SQL queries for investigation
-✅ Details validation procedures and escalation paths
-✅ 100% confidence → comprehensive guidance provided
+- Classification: data_issue/reconciliation (High Priority, 80% confidence)
+- Provides specific code for investigation
+- Details validation procedures and escalation paths
+- 100% confidence → comprehensive guidance provided
 ```
 
-### Scenario 2: Compliance Review (Human Review)
+### Scenario 2: Bless Review (Human Review)
 ```
-Input: "Can you please review this trade for compliance approval?"
+Input: "Can you please bless this code?"
 
 Output:
-✅ Classification: review_request (detected by LLM analysis)
-✅ System stays silent - defers to human experts
-✅ No automated compliance decisions (appropriate)
-✅ Professional handling of sensitive requests
+- Classification: bless_request (detected by LLM analysis)
+- System stays silent - defers to human experts
+- No automated bless review decisions (appropriate)
 ```
 
 ### Scenario 3: Vague Query (Silent Mode)
@@ -168,10 +164,10 @@ Output:
 Input: "I need help with this thing"
 
 Output:
-✅ Classification: query (attempted but low relevance)
-✅ No relevant knowledge found in vector search
-✅ System stays silent rather than providing unhelpful responses
-✅ Graceful handling prevents noise in production channels
+- Classification: query (attempted but low relevance)
+- No relevant knowledge found in section-level vector search
+- System stays silent rather than providing unhelpful responses
+- Graceful handling prevents noise in production channels
 ```
 
 ## Performance Metrics
@@ -186,32 +182,25 @@ Typical demo performance:
 ## Troubleshooting Demo Issues
 
 ### Common Issues
-1. **API Key**: Ensure `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` is set
+1. **API Key**: Ensure `OPENAI_API_KEY` is set
 2. **Dependencies**: Run `pip install 'numpy>=1.26.4,<2.0' sentence-transformers`
 3. **Server Startup**: Check MCP servers start: `python -m support_agent.cli health`
 
-### Expected Warnings
-- NumPy compatibility warnings (handled gracefully)
-- Resource tracker warnings (cleanup-related, non-critical)
-
 ### Demo Tips
 1. **Start with automated demo** (`--no-interactive`) to see system capabilities
-2. **Try different feed types** to see generic parameter substitution
-3. **Test context awareness** with queries that state what you've already verified
-4. **Try compliance requests** to see human review detection
-5. **Use vague queries** to see silent mode behavior
+2. **Test context awareness** with queries that state what you've already verified
+3. **Try bless requests** to see human review detection
+4. **Use vague queries** to see silent mode behavior
 
 ## Extending the Demo
 
 ### Adding New Knowledge
 1. Create `.md` file in `knowledge_resources/`
 2. Use clear header structure (# ## ### for hierarchical sections)
-3. Use parameterized examples: `feedType`, `dealName`, etc.
-4. System automatically parses sections and indexes content
+3. Use parameterized examples: `feedType`, `dealName`, etc. whenever possible
+4. System automatically parses sections and indexes content upon startup
 
 ### Testing New Scenarios
 1. Add test cases to `tests/test_functional.py`
 2. Run full test suite: `python -m pytest tests/ -v`
 3. Test manually: `python -m support_agent.cli demo`
-
-The demo showcases a production-ready system that intelligently assists support engineers while knowing when to stay silent or defer to humans.

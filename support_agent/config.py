@@ -6,8 +6,9 @@ configuration system that supports multiple connection methods and server
 endpoints, allowing the system to adapt to different deployment scenarios.
 """
 
+import os
 from enum import Enum
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pydantic import BaseModel
 
 
@@ -24,6 +25,27 @@ class ConnectionMethod(Enum):
     STDIO = "stdio"
     SSE = "sse"
     HTTP = "http"
+
+
+class LLMConfig(BaseModel):
+    """Configuration for LLM provider settings.
+    
+    Centralizes all LLM-related configuration parameters to avoid hardcoding
+    throughout the application. Supports environment variable overrides for
+    flexible deployment across different environments.
+    
+    Attributes:
+        default_model: Default LLM model to use for analysis.
+        temperature: Sampling temperature for LLM responses (0.0-1.0).
+        max_tokens: Maximum tokens per LLM request.
+        timeout: Request timeout in seconds for LLM calls.
+        api_base: Base URL for LLM API endpoint.
+    """
+    default_model: str = os.getenv("LLM_DEFAULT_MODEL", "gpt-4o-mini")
+    temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+    max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "1000"))
+    timeout: float = float(os.getenv("LLM_TIMEOUT", "30.0"))
+    api_base: Optional[str] = os.getenv("LLM_API_BASE")  # None means use provider default
 
 
 class ServerConfig(BaseModel):
@@ -43,8 +65,8 @@ class ServerConfig(BaseModel):
     name: str
     script_path: str
     connection_method: ConnectionMethod = ConnectionMethod.STDIO
-    host: str = "127.0.0.1"
-    port: int = 8000
+    host: str = os.getenv("MCP_HOST", "127.0.0.1")
+    port: int = int(os.getenv("MCP_PORT_BASE", "8000"))
     
     
 class MCPConfig(BaseModel):
@@ -62,9 +84,11 @@ class MCPConfig(BaseModel):
         connection_method: Default connection method for all servers.
         servers: Dictionary mapping server roles to their configurations.
         knowledge_search_depth: Maximum levels of recursive knowledge enhancement (1 = no recursion).
+        llm: LLM provider configuration settings.
     """
     connection_method: ConnectionMethod = ConnectionMethod.STDIO
     knowledge_search_depth: int = 1
+    llm: LLMConfig = LLMConfig()
     servers: Dict[str, ServerConfig] = {
         "classification": ServerConfig(
             name="ClassificationServer",

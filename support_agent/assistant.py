@@ -78,7 +78,7 @@ class SupportAssistant:
         
         # LLM configuration for MCP sampling
         self._llm_api_key = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
-        self._llm_api_base = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+        self._llm_api_base = self.config.llm.api_base or os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
         
     async def _sampling_callback(self, message: CreateMessageRequestParams) -> CreateMessageResult:
         """MCP sampling callback to process prompts with production LLM.
@@ -134,12 +134,12 @@ class SupportAssistant:
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": message.model or "gpt-4o-mini",
+                        "model": message.model or self.config.llm.default_model,
                         "messages": messages,
-                        "max_tokens": message.maxTokens or 1000,
-                        "temperature": 0.3
+                        "max_tokens": message.maxTokens or self.config.llm.max_tokens,
+                        "temperature": self.config.llm.temperature
                     },
-                    timeout=30.0
+                    timeout=self.config.llm.timeout
                 )
                 
                 if response.status_code == 200:
@@ -441,9 +441,9 @@ class SupportAssistant:
                     "role": "user",
                     "content": TextContent(type="text", text=prompt)
                 }],
-                maxTokens=1000,
-                model="gpt-4o-mini",
-                temperature=0.1
+                maxTokens=self.config.llm.max_tokens,
+                model=self.config.llm.default_model,
+                temperature=self.config.llm.temperature
             )
             
             # Use production LLM sampling callback
@@ -494,7 +494,7 @@ class SupportAssistant:
                 {
                     "query": request.issue_description,
                     "category": classification.category,
-                    "max_results": 3
+                    "max_results": 5
                 }
             )
             # Estimate tokens
@@ -505,17 +505,22 @@ class SupportAssistant:
             if not knowledge_results.content or len(knowledge_results.content) == 0:
                 knowledge_data = []
             else:
-                knowledge_data = knowledge_results.content[0].text
-                if isinstance(knowledge_data, str):
-                    import json
-                    try:
-                        knowledge_data = json.loads(knowledge_data)
-                    except:
-                        knowledge_data = []
-            
-            # Handle the case where knowledge_data is a single dict instead of a list
-            if isinstance(knowledge_data, dict):
-                knowledge_data = [knowledge_data]
+                # Use ALL returned sections, not just the first one
+                knowledge_data = []
+                for content_item in knowledge_results.content:
+                    if hasattr(content_item, 'text'):
+                        section_data = content_item.text
+                        if isinstance(section_data, str):
+                            import json
+                            try:
+                                parsed_data = json.loads(section_data)
+                                # Handle both single section and list of sections
+                                if isinstance(parsed_data, list):
+                                    knowledge_data.extend(parsed_data)
+                                elif isinstance(parsed_data, dict):
+                                    knowledge_data.append(parsed_data)
+                            except:
+                                continue
             
             
             # Step 4: Skip system health checks - removed affected_system field
@@ -621,7 +626,9 @@ class SupportAssistant:
                 content = item.get("content", "")
                 
                 # Use LLM to intelligently identify knowledge gaps
-                gap_concepts = await self._identify_knowledge_gaps(content, current_depth)
+                gap_concepts = await self._identify_knowledge_gaps(content, current_depth, user_request)
+                
+                
                 for concept in gap_concepts:
                     if concept not in gaps_to_search:
                         gaps_to_search.append(concept)
@@ -683,6 +690,7 @@ class SupportAssistant:
                                     item["search_depth"] = current_depth + 1
                                     all_enhanced_data.append(item)
                                     new_results_this_level.append(item)
+                                    
                                         
                 except Exception as e:
                     # If follow-up search fails, continue silently with what we have
@@ -698,7 +706,7 @@ class SupportAssistant:
         
         return all_enhanced_data
     
-    async def _identify_knowledge_gaps(self, content: str, current_depth: int) -> list:
+    async def _identify_knowledge_gaps(self, content: str, current_depth: int, user_request: str = "") -> list:
         """Use LLM to intelligently identify concepts mentioned without implementation details.
         
         Analyzes knowledge content to find mentions of procedures, commands, or concepts
@@ -717,23 +725,31 @@ class SupportAssistant:
         # Use LLM to identify gaps intelligently  
         gap_prompt = f"""You are reviewing troubleshooting documentation. Your job is to find steps that mention actions but don't provide the specific commands or code to perform them.
 
+USER REQUEST: {user_request}
+
 DOCUMENTATION:
 {content[:1000]}
 
 Question: Are there any instructions that mention checking, verifying, running, or validating something but DON'T include the actual command, code, or specific procedure to do it?
 
+IMPORTANT CONTEXT AWARENESS:
+- If the user already confirmed something is working (e.g., "book2 resolved to MarkitWire"), DON'T suggest re-verifying that same thing
+- Focus on NEXT troubleshooting steps after what the user has confirmed
+- Prioritize gaps that help with the user's specific unresolved issue
+
 Look specifically for:
-- "check block events" without showing how to list them
-- "validate" without showing validation commands  
+- "check block events" without showing how to list them  
+- "validate" without showing validation commands
 - "check" or "verify" without providing the actual check/verification code
 - References to procedures without implementation details
 
 If you find actions that lack implementation details, list the 1-2 most important ones that need code/commands.
+PRIORITIZE gaps that are relevant to resolving the user's current issue.
 If the documentation provides complete implementation details, return empty array.
 
 Answer with just a JSON array: ["specific action that needs implementation", "another action"] or []
 
-Focus on finding actionable steps that are mentioned but not implemented with code."""
+Focus on finding actionable next steps that are mentioned but not implemented with code."""
 
         try:
             from mcp.types import CreateMessageRequestParams, TextContent
@@ -743,9 +759,9 @@ Focus on finding actionable steps that are mentioned but not implemented with co
                     "role": "user",
                     "content": TextContent(type="text", text=gap_prompt)
                 }],
-                model="gpt-4o-mini",
-                maxTokens=100,
-                temperature=0.1
+                model=self.config.llm.default_model,
+                maxTokens=100,  # Keep small for gap identification
+                temperature=self.config.llm.temperature
             )
             
             llm_result = await self._sampling_callback(sampling_request)
@@ -805,9 +821,9 @@ Answer with just "HANDLE" or "HUMAN_REVIEW"."""
                     "role": "user",
                     "content": TextContent(type="text", text=decision_prompt)
                 }],
-                model="gpt-4o-mini",
-                maxTokens=50,
-                temperature=0.1
+                model=self.config.llm.default_model,
+                maxTokens=50,  # Keep small for entity extraction
+                temperature=self.config.llm.temperature
             )
             
             llm_result = await self._sampling_callback(sampling_request)
@@ -847,11 +863,26 @@ Answer with just "HANDLE" or "HUMAN_REVIEW"."""
             primary_results = [item for item in knowledge_data if not item.get("is_followup", False)]
             followup_results = [item for item in knowledge_data if item.get("is_followup", False)]
             
-            # Use the best primary result as the main content
-            best_result = max(primary_results, key=lambda x: x.get("relevance_score", 0)) if primary_results else knowledge_data[0]
-            
-            # Combine knowledge content if we have follow-up results
-            combined_content = best_result.get('content', '')
+            # Combine top 2-3 primary results for comprehensive guidance
+            if primary_results:
+                # Sort by relevance score and take top results
+                sorted_results = sorted(primary_results, key=lambda x: x.get("relevance_score", 0), reverse=True)
+                top_results = sorted_results[:3]  # Focus on most relevant sections for DFS approach
+                best_result = top_results[0]  # Primary source for metadata
+                
+                # Combine content from all top results
+                combined_content = ""
+                for i, result in enumerate(top_results):
+                    if i == 0:
+                        combined_content += result.get('content', '')
+                    else:
+                        # Add additional sections with clear separation
+                        combined_content += f"\n\n---\nADDITIONAL RELEVANT SECTION:\n"
+                        combined_content += f"Source: {result.get('source', 'Unknown')}\n\n"
+                        combined_content += result.get('content', '')
+            else:
+                best_result = knowledge_data[0]
+                combined_content = best_result.get('content', '')
             
             if followup_results:
                 combined_content += "\n\n---\nADDITIONAL KNOWLEDGE FOUND:\n"
@@ -883,8 +914,8 @@ Answer with just "HANDLE" or "HUMAN_REVIEW"."""
                         "role": "user", 
                         "content": TextContent(type="text", text=analysis_prompt)
                     }],
-                    model="gpt-4o-mini",
-                    maxTokens=500
+                    model=self.config.llm.default_model,
+                    maxTokens=500  # Fixed size for system info
                 )
                 
                 # Use our sampling callback to get LLM response

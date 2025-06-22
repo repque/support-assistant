@@ -18,8 +18,8 @@ This document defines the technical architecture for an AI-powered production su
 │  │ Processor       │ │  Engine          │ │ Generator       │   │
 │  └─────────────────┘ └──────────────────┘ └─────────────────┘   │
 │  ┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐   │
-│  │ Context         │ │  Workflow        │ │ Vector Search   │   │
-│  │ Manager         │ │  Orchestrator    │ │ Engine          │   │
+│  │ Context-Aware   │ │  DFS Knowledge   │ │ Section-Level   │   │
+│  │ Gap Detection   │ │  Retrieval       │ │ Vector Search   │   │
 │  └─────────────────┘ └──────────────────┘ └─────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                                 │
@@ -233,13 +233,15 @@ class RecommendationGenerator:
 ```python
 class VectorSearchEngine:
     """
-    Provides semantic search capabilities using vector embeddings for knowledge retrieval.
-    Handles document indexing and similarity-based search operations.
+    Provides section-level semantic search using vector embeddings for knowledge retrieval.
+    Handles section parsing, indexing, and context-aware similarity-based search operations.
+    Supports DFS recursive searches for implementation detail discovery.
     """
     
     async def semantic_search(self, query: str, top_k: int = 5) -> List[SearchResult]
-    async def index_documents(self) -> bool
-    async def get_relevance_score(self, query: str, document: str) -> float
+    async def index_documents(self) -> bool  # Parses markdown into sections and creates embeddings
+    async def identify_knowledge_gaps(self, content: str, user_request: str) -> List[str]
+    async def recursive_search(self, knowledge_data: List, depth: int = 1) -> List[SearchResult]
 ```
 
 ### Data Models
@@ -316,7 +318,9 @@ class AnalysisWorkflow(BaseModel):
    └── Knowledge base search preparation
 
 4. Information Gathering
-   ├── Knowledge base search (Knowledge Retrieval MCP)
+   ├── Section-level knowledge search (Knowledge Retrieval MCP)
+   ├── Context-aware gap identification (LLM-based)
+   ├── DFS recursive knowledge retrieval for missing details
    ├── Health status checks (Health Monitor MCP)
    └── Log analysis (Health Monitor MCP)
 
@@ -476,16 +480,18 @@ Knowledge Base
 ## Technology Stack
 
 ### Backend Services
-- **Language**: Python 3.9+
-- **Framework**: FastAPI with async/await
+- **Language**: Python 3.12+
+- **Framework**: FastAPI with FastMCP for MCP servers
 - **Data Validation**: Pydantic v2
-- **ML/AI**: LangGraph for agent orchestration
+- **Vector Search**: sentence-transformers with all-MiniLM-L6-v2 model
+- **LLM Integration**: OpenAI/Anthropic APIs with configurable parameters
+- **Configuration**: Environment variable-based configuration system
 
 ### Development Tools
-- **Testing**: unittest with async support
-- **Code Quality**: black, isort, mypy, ruff
-- **Documentation**: Sphinx with autodoc
-- **API Documentation**: FastAPI auto-generated OpenAPI
+- **Testing**: pytest with async support and comprehensive functional tests
+- **Code Quality**: ruff for linting and formatting
+- **Configuration**: Pydantic-based configuration with environment variable overrides
+- **Knowledge Base**: Pure markdown with automatic section parsing
 
 ## Success Metrics & KPIs
 
