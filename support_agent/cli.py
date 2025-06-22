@@ -348,17 +348,6 @@ async def run_interactive_demo(engineer_id: str, lob: str, config: MCPConfig):
                 console.print("[dim]This request would be handled by human support engineers.[/dim]")
             else:
                 await display_analysis_results(result)
-            
-            # Ask if user wants to continue
-            continue_session = Prompt.ask(
-                "\n[bold cyan]Would you like to analyze another issue?[/bold cyan]",
-                choices=["yes", "no"],
-                default="yes"
-            )
-            
-            if continue_session.lower() == "no":
-                console.print("\nThanks for using the Support Agent demo!")
-                break
     
     finally:
         await assistant.stop_mcp_servers()
