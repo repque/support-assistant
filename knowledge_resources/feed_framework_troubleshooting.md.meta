@@ -1,7 +1,0 @@
-{
-  "title": "Feed Framework Troubleshooting",
-  "category": "query",
-  "subcategory": "feed_issue",
-  "keywords": ["downstream events", "block events", "evInfo", "DownstreamState", "downstream", "events", "feed framework"],
-  "description": "Guide for working with feed framework including checking downstream events and block events"
-}

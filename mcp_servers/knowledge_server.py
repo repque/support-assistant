@@ -13,10 +13,11 @@ runbooks, and best practices.
 
 
 import json
+import re
 import numpy as np
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from mcp.server.fastmcp import FastMCP
 
@@ -41,8 +42,8 @@ class VectorKnowledgeBase:
     
     def __init__(self):
         self.embeddings_model = None
-        self.document_embeddings = []
-        self.documents = []
+        self.section_embeddings = []
+        self.sections = []
         self.indexed = False
         
         if EMBEDDINGS_AVAILABLE:
@@ -84,53 +85,111 @@ class VectorKnowledgeBase:
                 self.embeddings_model = None
                 
         # Clean up embeddings data
-        if hasattr(self.document_embeddings, 'clear'):
-            self.document_embeddings.clear()
+        if hasattr(self.section_embeddings, 'clear'):
+            self.section_embeddings.clear()
         else:
-            self.document_embeddings = []
-        self.documents.clear()
+            self.section_embeddings = []
+        self.sections.clear()
+    
+    def parse_markdown_sections(self, content: str, doc_name: str) -> List[Tuple[str, str, str]]:
+        """Parse markdown content into sections.
+        
+        Args:
+            content: Full markdown content
+            doc_name: Name of the source document
+            
+        Returns:
+            List of tuples: (section_title, section_content, hierarchical_path)
+        """
+        lines = content.split('\n')
+        sections = []
+        current_section = {"title": doc_name, "content": [], "level": 0, "path": [doc_name]}
+        section_stack = [current_section]
+        
+        for line in lines:
+            # Check if line is a header
+            header_match = re.match(r'^(#{1,6})\s+(.+)$', line)
+            if header_match:
+                # Save current section if it has content
+                if current_section["content"]:
+                    full_title = " > ".join(current_section["path"])
+                    content_text = '\n'.join(current_section["content"]).strip()
+                    if content_text:  # Only add non-empty sections
+                        sections.append((full_title, content_text, '/'.join(current_section["path"])))
+                
+                # Process new header
+                level = len(header_match.group(1))
+                title = header_match.group(2).strip()
+                
+                # Update section stack to maintain hierarchy
+                while len(section_stack) > level:
+                    section_stack.pop()
+                
+                # Create new section
+                current_path = section_stack[-1]["path"][:] if section_stack else [doc_name]
+                if level > len(section_stack):
+                    current_path.append(title)
+                else:
+                    current_path = current_path[:level-1] + [title]
+                
+                current_section = {
+                    "title": title,
+                    "content": [],
+                    "level": level,
+                    "path": current_path
+                }
+                section_stack.append(current_section)
+            else:
+                # Add content to current section
+                current_section["content"].append(line)
+        
+        # Don't forget the last section
+        if current_section["content"]:
+            full_title = " > ".join(current_section["path"])
+            content_text = '\n'.join(current_section["content"]).strip()
+            if content_text:
+                sections.append((full_title, content_text, '/'.join(current_section["path"])))
+        
+        return sections
     
     async def index_documents(self):
-        """Pre-compute embeddings for all knowledge documents."""
+        """Pre-compute embeddings for all knowledge document sections."""
         if not self.embeddings_model:
             return False
             
         try:
-            self.documents = []
-            self.document_embeddings = []
+            self.sections = []
+            self.section_embeddings = []
             
             # Load all markdown documents
             for file_path in RESOURCES_DIR.glob("*.md"):
-                metadata_path = RESOURCES_DIR / f"{file_path.name}.meta"
-                
-                # Load metadata if exists
-                metadata = {}
-                if metadata_path.exists():
-                    with open(metadata_path, 'r') as f:
-                        metadata = json.load(f)
-                
                 # Read document content
                 with open(file_path, 'r') as f:
                     content = f.read()
                 
-                # Create document record
-                doc = {
-                    "uri": f"knowledge://{file_path.name}",
-                    "name": file_path.stem,
-                    "title": metadata.get("title", file_path.stem.replace("_", " ").title()),
-                    "description": metadata.get("description", f"Knowledge resource: {file_path.stem}"),
-                    "content": content,
-                    "metadata": metadata
-                }
+                # Parse into sections using filename as base
+                doc_name = file_path.stem.replace("_", " ").title()
+                sections = self.parse_markdown_sections(content, doc_name)
                 
-                # Generate embedding for title + content (first 1000 chars for efficiency)
-                text_to_embed = f"{doc['title']} {doc['description']} {content[:1000]}"
-                embedding = self.embeddings_model.encode(text_to_embed)
-                
-                self.documents.append(doc)
-                self.document_embeddings.append(embedding)
+                # Create embeddings for each section
+                for section_title, section_content, section_path in sections:
+                    # Create section record
+                    section = {
+                        "uri": f"knowledge://{file_path.name}#{section_path}",
+                        "doc_name": file_path.stem,
+                        "section_title": section_title,
+                        "content": section_content,
+                        "section_path": section_path
+                    }
+                    
+                    # Generate embedding for section title + content (limit for efficiency)
+                    text_to_embed = f"{section_title} {section_content[:1000]}"
+                    embedding = self.embeddings_model.encode(text_to_embed)
+                    
+                    self.sections.append(section)
+                    self.section_embeddings.append(embedding)
             
-            self.document_embeddings = np.array(self.document_embeddings)
+            self.section_embeddings = np.array(self.section_embeddings)
             self.indexed = True
             # Don't print indexing message to keep demo clean
             return True
@@ -140,7 +199,7 @@ class VectorKnowledgeBase:
             return False
     
     async def semantic_search(self, query: str, top_k: int = 5) -> List[Dict]:
-        """Find most semantically similar documents."""
+        """Find most semantically similar document sections."""
         if not self.indexed or not self.embeddings_model:
             return []
         
@@ -148,10 +207,10 @@ class VectorKnowledgeBase:
             # Generate query embedding
             query_embedding = self.embeddings_model.encode([query])
             
-            # Calculate cosine similarity with all documents
-            similarities = cosine_similarity(query_embedding, self.document_embeddings)[0]
+            # Calculate cosine similarity with all sections
+            similarities = cosine_similarity(query_embedding, self.section_embeddings)[0]
             
-            # Get top-k most similar documents
+            # Get top-k most similar sections
             top_indices = np.argsort(similarities)[::-1][:top_k]
             results = []
             
@@ -160,18 +219,18 @@ class VectorKnowledgeBase:
                 
                 # Only include results above relevance threshold
                 if similarity_score > 0.2:
-                    doc = self.documents[idx].copy()
+                    section = self.sections[idx].copy()
                     
                     # Create result in expected format
                     result = {
-                        "content": doc["content"],
-                        "source": f"Knowledge Resource - {doc['title']}",
+                        "content": section["content"],
+                        "source": section["section_title"],
                         "relevance_score": similarity_score,
                         "metadata": {
-                            "uri": doc["uri"],
-                            "title": doc["title"],
-                            "description": doc["description"],
-                            "mime_type": "text/markdown"
+                            "uri": section["uri"],
+                            "title": section["section_title"],
+                            "mime_type": "text/markdown",
+                            "section_path": section["section_path"]
                         }
                     }
                     results.append(result)
@@ -195,16 +254,13 @@ def _create_default_resources():
     - Step-by-step resolution processes
     - Quality assurance and documentation requirements
     
-    Resources are stored as markdown files with accompanying metadata
-    for efficient search and categorization.
+    Resources are stored as simple markdown files that are automatically
+    parsed into sections for granular search capabilities.
     """
     
     resources = [
         {
             "filename": "data_reconciliation.md",
-            "title": "Data Reconciliation Issue Resolution",
-            "description": "Procedures for resolving data quality and reconciliation issues",
-            "category": "data_issue", 
             "content": """# Data Reconciliation Issue Resolution
 
 ## Overview
@@ -314,18 +370,6 @@ This runbook covers procedures for investigating and resolving data reconciliati
         if not file_path.exists():
             with open(file_path, 'w') as f:
                 f.write(resource["content"])
-            
-            # Create metadata file
-            metadata = {
-                "title": resource["title"],
-                "description": resource["description"],
-                "category": resource["category"],
-                "created": datetime.now().isoformat(),
-                "last_updated": datetime.now().isoformat()
-            }
-            metadata_path = RESOURCES_DIR / f"{resource['filename']}.meta"
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
 
 # Initialize resources and vector index on startup
 _create_default_resources()

@@ -134,10 +134,10 @@ python -m support_agent.cli demo --connection sse
 - **Intelligence**: Context awareness, parameter substitution, gap detection
 
 ### Knowledge Base
-- **Format**: Markdown with metadata for enhanced search
+- **Format**: Pure markdown with section-level indexing
 - **Parameterization**: Generic examples using `feedType`, `dealName` variables
 - **Content**: Feed troubleshooting, data reconciliation, outage procedures
-- **Updates**: Automatic indexing of new knowledge files
+- **Updates**: Automatic section parsing and indexing of new knowledge files
 
 ## Demo Scenarios Walkthrough
 
@@ -205,9 +205,9 @@ Typical demo performance:
 
 ### Adding New Knowledge
 1. Create `.md` file in `knowledge_resources/`
-2. Use parameterized examples: `feedType`, `dealName`, etc.
-3. Add `.meta` file with keywords and description
-4. System automatically indexes new content
+2. Use clear header structure (# ## ### for hierarchical sections)
+3. Use parameterized examples: `feedType`, `dealName`, etc.
+4. System automatically parses sections and indexes content
 
 ### Testing New Scenarios
 1. Add test cases to `tests/test_functional.py`

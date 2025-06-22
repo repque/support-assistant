@@ -181,9 +181,9 @@ python -m support_agent.cli demo --search-depth 1  # Single-level (default)
 
 ### Adding New Knowledge
 1. Create markdown file in `knowledge_resources/`
-2. Use parameterized examples with `feedType`, `dealName`, etc.
-3. Add metadata file with keywords for better search ranking
-4. System automatically indexes on startup
+2. Use clear header structure (# ## ### for hierarchical sections)
+3. Use parameterized examples with `feedType`, `dealName`, etc.
+4. System automatically indexes sections on startup
 
 ### Example Knowledge File
 ```markdown
