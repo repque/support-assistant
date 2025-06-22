@@ -23,12 +23,25 @@ from mcp.server.fastmcp import FastMCP
 
 # Vector embeddings imports
 try:
-    from sentence_transformers import SentenceTransformer
+    import openai
+    import os
     from sklearn.metrics.pairwise import cosine_similarity
-    EMBEDDINGS_AVAILABLE = True
+    import numpy as np
+    OPENAI_EMBEDDINGS_AVAILABLE = bool(os.getenv("OPENAI_API_KEY"))
+    EMBEDDINGS_AVAILABLE = OPENAI_EMBEDDINGS_AVAILABLE
 except ImportError:
+    OPENAI_EMBEDDINGS_AVAILABLE = False
     EMBEDDINGS_AVAILABLE = False
-    print("Warning: sentence-transformers not available. Install with: pip install sentence-transformers scikit-learn")
+    print("Warning: openai not available. Install with: pip install openai")
+
+# Fallback to sentence-transformers if OpenAI not available
+if not OPENAI_EMBEDDINGS_AVAILABLE:
+    try:
+        from sentence_transformers import SentenceTransformer
+        EMBEDDINGS_AVAILABLE = True
+        print("Using sentence-transformers as fallback")
+    except ImportError:
+        print("Warning: Neither OpenAI nor sentence-transformers available")
 
 # Create FastMCP server instance
 mcp = FastMCP("KnowledgeRetrievalServer")
@@ -45,21 +58,84 @@ class VectorKnowledgeBase:
         self.section_embeddings = []
         self.sections = []
         self.indexed = False
+        self.use_openai = OPENAI_EMBEDDINGS_AVAILABLE
         
         if EMBEDDINGS_AVAILABLE:
             try:
-                # Use a lightweight, fast model for embeddings (suppress output)
-                import logging
-                logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
-                self.embeddings_model = SentenceTransformer('all-MiniLM-L6-v2')
-                # Don't print initialization message to keep demo clean
+                if self.use_openai:
+                    # Use OpenAI's superior semantic embedding model
+                    self.embeddings_model = "text-embedding-3-small"  # Model identifier
+                    print("Using OpenAI text-embedding-3-small for superior semantic search")
+                else:
+                    # Fallback to sentence-transformers
+                    import logging
+                    logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
+                    self.embeddings_model = SentenceTransformer('all-MiniLM-L6-v2')
+                    print("Using sentence-transformers fallback")
             except Exception as e:
                 print(f"Failed to load embeddings model: {e}")
                 self.embeddings_model = None
     
+    def _generate_embedding(self, text: str):
+        """Generate embedding using either OpenAI or sentence-transformers."""
+        if self.use_openai and isinstance(self.embeddings_model, str):
+            # Use OpenAI API
+            client = openai.OpenAI()
+            response = client.embeddings.create(
+                model=self.embeddings_model,
+                input=text
+            )
+            return np.array(response.data[0].embedding)
+        else:
+            # Use sentence-transformers
+            return self.embeddings_model.encode(text)
+    
+    async def _analyze_query_intent(self, query: str) -> Dict[str, str]:
+        """Analyze query to understand intent using LLM reasoning without hardcoded categories."""
+        if not self.use_openai:
+            return {"reasoning": "LLM not available", "semantic_focus": ""}
+        
+        try:
+            client = openai.OpenAI()
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{
+                    "role": "system", 
+                    "content": """You are an expert at understanding technical support queries. Analyze the query and provide semantic understanding to help with document retrieval.
+
+Provide:
+1. A semantic summary of what the user is asking about
+2. Key concepts that should be prioritized in document search
+3. Any concepts that should be deprioritized or avoided
+
+Do NOT use predefined categories. Focus on understanding the user's actual problem.
+
+Respond with JSON: {
+  "semantic_focus": "brief description of what user needs help with",
+  "key_concepts": ["concept1", "concept2", "concept3"],
+  "avoid_concepts": ["concept1", "concept2"],
+  "reasoning": "explanation of the user's actual problem"
+}"""
+                },
+                {
+                    "role": "user",
+                    "content": f"Query: {query}"
+                }],
+                temperature=0.1,
+                max_tokens=300
+            )
+            
+            import json
+            result = json.loads(response.choices[0].message.content)
+            return result
+            
+        except Exception as e:
+            print(f"LLM query analysis failed: {e}")
+            return {"semantic_focus": "", "key_concepts": [], "avoid_concepts": [], "reasoning": f"LLM analysis failed: {e}"}
+
     def cleanup(self):
         """Clean up model resources to prevent semaphore leaks."""
-        if self.embeddings_model is not None:
+        if self.embeddings_model is not None and not self.use_openai:
             try:
                 # Clean up any torch multiprocessing contexts
                 import torch
@@ -189,7 +265,7 @@ class VectorKnowledgeBase:
                         text_to_embed = section_content[:1000]
                     else:
                         text_to_embed = f"{clean_section_title} {section_content[:1000]}"
-                    embedding = self.embeddings_model.encode(text_to_embed)
+                    embedding = self._generate_embedding(text_to_embed)
                     
                     self.sections.append(section)
                     self.section_embeddings.append(embedding)
@@ -204,13 +280,18 @@ class VectorKnowledgeBase:
             return False
     
     async def semantic_search(self, query: str, top_k: int = 5) -> List[Dict]:
-        """Find most semantically similar document sections."""
+        """Find most semantically similar document sections with query understanding."""
         if not self.indexed or not self.embeddings_model:
             return []
         
         try:
-            # Generate query embedding
-            query_embedding = self.embeddings_model.encode([query])
+            # Solution #5: Analyze query intent first using LLM
+            query_intent = await self._analyze_query_intent(query)
+            
+            # Generate query embedding with better model
+            query_embedding = self._generate_embedding(query)
+            if query_embedding.ndim == 1:
+                query_embedding = query_embedding.reshape(1, -1)
             
             # Calculate cosine similarity with all sections
             similarities = cosine_similarity(query_embedding, self.section_embeddings)[0]
@@ -219,26 +300,53 @@ class VectorKnowledgeBase:
             top_indices = np.argsort(similarities)[::-1][:top_k]
             results = []
             
+            # Apply LLM-based semantic filtering
+            key_concepts = query_intent.get("key_concepts", [])
+            avoid_concepts = query_intent.get("avoid_concepts", [])
+            semantic_focus = query_intent.get("semantic_focus", "")
+            
             for idx in top_indices:
                 similarity_score = float(similarities[idx])
                 
                 # Only include results above relevance threshold
                 if similarity_score > 0.2:
                     section = self.sections[idx].copy()
+                    section_text = f"{section['section_title']} {section['content']}".lower()
+                    
+                    # Generic concept-based boosting/penalizing
+                    concept_adjustment = 0.0
+                    
+                    # Boost if key concepts are present
+                    for concept in key_concepts:
+                        if concept.lower() in section_text:
+                            concept_adjustment += 0.05  # Small boost per matching key concept
+                    
+                    # Penalize if avoid concepts are present
+                    for concept in avoid_concepts:
+                        if concept.lower() in section_text:
+                            concept_adjustment -= 0.1  # Penalty for concepts to avoid
+                    
+                    # Apply semantic adjustments
+                    adjusted_score = similarity_score + concept_adjustment
                     
                     # Create result in expected format
                     result = {
                         "content": section["content"],
                         "source": section["section_title"],
-                        "relevance_score": similarity_score,
+                        "relevance_score": max(adjusted_score, 0.0),  # Don't go negative
                         "metadata": {
                             "uri": section["uri"],
                             "title": section["section_title"],
                             "mime_type": "text/markdown",
-                            "section_path": section["section_path"]
+                            "section_path": section["section_path"],
+                            "semantic_focus": semantic_focus,
+                            "concept_adjustment": concept_adjustment
                         }
                     }
                     results.append(result)
+            
+            # Re-sort by adjusted relevance scores
+            results.sort(key=lambda x: x["relevance_score"], reverse=True)
             
             return results
             
