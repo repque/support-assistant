@@ -40,9 +40,9 @@ python -m support_agent.cli info
 > my trade has book2 resolved to 'MarkitWire' but it did not feed outbound
 
 Classification: query/feed_issue (High Priority, 85% confidence)
-
-## Immediate Actions
-1. **Check for Block Events:**
+```
+### Suggested Troubleshooting Steps
+1. **Check for Validation Error:**
    ```python
    deal = ro(dealName)
    fs = deal.FeedState("MarkitWire")
@@ -57,6 +57,7 @@ Classification: query/feed_issue (High Priority, 85% confidence)
    ds.evInfo() # prints downstream events, block events
    ```
 
+```
 Performance: 6 tools, 5.9k tokens, 6.8 seconds
 ```
 
@@ -80,17 +81,16 @@ Performance: 6 tools, 5.9k tokens, 6.8 seconds
 
 ## Architecture
 
-```
 support_agent/
 ├── assistant.py              # Main orchestrator
-├── cli.py                    # Command-line interface / interactive testbed
+├── cli.py                    # Command-line interface, interactive testbed
 ├── config.py                 # Configuration management
 └── models.py                 # Pydantic data models
 
 mcp_servers/
 ├── categories/
 │   └── atrs.json              # Team-specific configuration
-├── classification_server.py   # LLM-based classification / triage server
+├── classification_server.py   # LLM-based classification, triage server
 ├── knowledge_server.py        # Vector search knowledge provider
 └── health_server.py           # Health monitoring server (extension point)
 
@@ -102,7 +102,6 @@ knowledge_resources/           # Collection of knowledge assets
 
 tests/
 └── test_functional.py         # Comprehensive functional tests
-```
 
 ## Key Architectural Decisions
 
