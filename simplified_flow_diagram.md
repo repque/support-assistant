@@ -11,7 +11,7 @@ sequenceDiagram
     participant KnowServer as Knowledge
     participant HealthServer as Health
     
-    Note over User,HealthServer: "My MarkitWire feed isn't sending outbound messages"
+    Note over User,HealthServer: "My trade has book2 resolved to 'MarkitWire' but did not feed outbound"
     
     User->>Assistant: Submit request
     
@@ -20,29 +20,30 @@ sequenceDiagram
         Assistant->>ClassServer: 1. Get prompt for ATRS team
         ClassServer-->>Assistant: Team-specific prompt (~2800 chars)
         Assistant->>LLM: 2. Process prompt
-        LLM-->>Assistant: {"category": "query", "confidence": 0.85}
+        LLM-->>Assistant: {"category": "query", "subcategory": "feed_issue"}
         Assistant->>ClassServer: 3. Parse & validate result
         ClassServer-->>Assistant: Final classification
     end
     
     rect rgb(248, 255, 248)
-        Note over Assistant,HealthServer: ANALYSIS & DECISION
-        Assistant->>KnowServer: Search knowledge base
-        KnowServer-->>Assistant: Relevant solutions (85% relevance)
+        Note over Assistant,HealthServer: VECTOR SEARCH & LLM DECISION
+        Assistant->>KnowServer: Vector search with embeddings
+        KnowServer-->>Assistant: Semantic matches from knowledge base
         Assistant->>HealthServer: Check system health
         HealthServer-->>Assistant: Service status
-        Assistant->>Assistant: Calculate confidence: 100%
+        Assistant->>LLM: Should assistant handle this request?
+        LLM-->>Assistant: Yes - relevant knowledge available
     end
     
     rect rgb(255, 248, 240)
-        Note over Assistant,LLM: RECOMMENDATIONS
-        Assistant->>KnowServer: Get analysis prompt
-        KnowServer-->>Assistant: Contextual prompt
-        Assistant->>LLM: Generate recommendations
-        LLM-->>Assistant: Detailed troubleshooting steps
+        Note over Assistant,LLM: CONTEXT-AWARE RECOMMENDATIONS
+        Assistant->>KnowServer: Get analysis prompt with context awareness
+        KnowServer-->>Assistant: Contextual prompt + gap detection
+        Assistant->>LLM: Generate recommendations (skip book2 verification)
+        LLM-->>Assistant: Context-aware troubleshooting with ds.evInfo()
     end
     
-    Assistant-->>User: Display results<br/>5 tools, 3.5k tokens, 4.2s
+    Assistant-->>User: Display results<br/>6 tools, 5.9k tokens, 6.8s
 ```
 
 ## **Core Architecture Decisions**
@@ -58,16 +59,19 @@ graph LR
     style C fill:#fff3e0
 ```
 
-### 2. **Confidence-Based Decision Tree**
+### 2. **Vector-Based Knowledge & LLM Decision Tree**
 ```mermaid
 flowchart TD
-    A[User Request] --> B[Classify]
-    B --> C{Confidence ≥ 60%?}
-    C -->|No| D[Stay Silent]
-    C -->|Yes| E[Provide Recommendations]
+    A[User Request] --> B[Classify with LLM]
+    B --> C[Vector Search Knowledge Base]
+    C --> D[LLM: Should Handle Request?]
+    D -->|No relevant knowledge| E[Stay Silent]
+    D -->|Human review needed| F[Defer to Humans]
+    D -->|Knowledge available| G[Context-Aware Recommendations]
     
-    style D fill:#ffebee
-    style E fill:#e8f5e8
+    style E fill:#ffebee
+    style F fill:#fff3e0
+    style G fill:#e8f5e8
 ```
 
 ### 3. **Multi-Team Support**
@@ -98,34 +102,49 @@ graph TB
 
 | Metric | Value | Detail |
 |--------|-------|--------|
-| **Response Time** | 4.2s | End-to-end processing |
-| **Token Usage** | 3,500 | ~$0.01-0.02 cost |
-| **Tool Calls** | 5 | Classification, Knowledge, Health |
-| **LLM Calls** | 2 | Classification + Recommendations |
-| **Confidence** | 100% | High enough to respond |
+| **Response Time** | 6.8s | End-to-end processing with vector search |
+| **Token Usage** | 5,900 | ~$0.02-0.03 cost |
+| **Tool Calls** | 6 | Classification, Vector Search, Health, Gap Detection |
+| **LLM Calls** | 3 | Classification + Decision + Recommendations |
+| **Decision** | Context-Aware | Vector search + LLM decision |
 
 ## **Example Output**
 
 ```
 Issue Classification
    Category: query/feed_issue 
-   Priority: high (85% confidence)
+   Priority: high
 
-Resolution Steps  
-   1. Check feed status: SELECT * FROM trade_feeds...
-   2. Verify MarkitWire connectivity: curl -H "Auth..."
-   3. Review validation results: SELECT * FROM feed_validations...
-   4. Check downstream systems status
+Immediate Actions
+   1. **Check for Block Events:**
+      ```python
+      deal = ro(dealName)
+      fs = deal.FeedState("MarkitWire")
+      dt = fs._DownstreamTrades()[0]
+      dt.validate() # investigate validation failures
+      ```
+
+   2. **Check Downstream Events:**
+      ```python
+      deal = ro(dealName)
+      ds = deal.DownstreamState("MarkitWire")
+      ds.evInfo() # prints downstream events, block events
+      ```
    
 Analysis Details
-   Confidence: 100% (Classification: 85%, Knowledge: 85%, Health: Available)
-   Sources: Knowledge Base, Health Monitor
+   Decision: Context-aware recommendations (skipped book2 verification)
+   Sources: Vector search + Gap detection + Context awareness
    
-Performance: 5 tools, 3,500 tokens, 4.2 seconds
+Performance: 6 tools, 5,900 tokens, 6.8 seconds
 ```
 
 ## **Key Success Factors**
 
-- ✅ **Smart Silence**: Won't respond to vague requests or review requests  
-- ✅ **Real LLM**: Uses actual OpenAI API, no mocking
+- ✅ **Vector Embeddings**: Semantic search with sentence-transformers, no keyword fallbacks
+- ✅ **Context Awareness**: Skips redundant steps based on user's stated facts
+- ✅ **Generic Feed Support**: Works with any feed type through intelligent parameter substitution
+- ✅ **LLM-Based Decisions**: All logic decisions made by LLM, no hardcoded business rules
+- ✅ **Gap Detection**: Recursively searches for missing implementation details
+- ✅ **Smart Silence**: Won't respond to vague requests or review requests
+- ✅ **Real LLM**: Uses actual OpenAI/Anthropic APIs, no mocking
 - ✅ **Multi-Team**: Handles both ATRS and Core teams

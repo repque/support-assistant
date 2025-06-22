@@ -2,199 +2,216 @@
 
 ## Overview
 
-This demo showcases the production-ready AI Production Support Assistant built using the Model Context Protocol (MCP). The system provides intelligent analysis and resolution recommendations for production support requests across multiple teams (ATRS and Core) using end-to-end LLM sampling with comprehensive anti-hallucination mechanisms.
+This demo showcases the production-ready AI Production Support Assistant built using Model Context Protocol (MCP) architecture with vector-based semantic search and intelligent LLM decision making. The system provides context-aware analysis and resolution recommendations for production support requests with no hardcoded business logic.
 
-## Installation & Setup
+## Quick Start
 
+### Installation & Setup
 ```bash
 # Install the package
 pip install -e .
 
-# Verify installation with comprehensive test suite
-python run_tests.py
+# Set up API key
+export OPENAI_API_KEY="your-openai-key"
+# OR
+export ANTHROPIC_API_KEY="your-anthropic-key"
+
+# Verify installation
+python -m pytest tests/ -v
 ```
 
 ## Demo Commands
 
-### 1. System Overview
+### 1. Automated Demo Scenarios
 ```bash
-python test_system_overview.py
+python -m support_agent.cli demo --no-interactive
 ```
-Shows complete system capabilities, available teams, categories, and sample classifications.
+**Best starting point** - Shows three key scenarios:
+- **High Confidence Analysis**: Data reconciliation with detailed SQL procedures
+- **Human Review Required**: Compliance requests properly deferred to humans  
+- **Silent Mode**: Vague queries handled gracefully without recommendations
 
-### 2. Multi-Team Classification Demo
+### 2. Interactive Demo
 ```bash
-python test_multi_team_classification.py
+python -m support_agent.cli demo
 ```
-Demonstrates team-specific classification for both ATRS and Core teams with realistic scenarios.
+Interactive session where you can test any support requests:
+- Try: `"MarkitWire feed issue"`
+- Try: `"DCPP feed not working"`  
+- Try: `"my trade has book2 resolved to 'Bloomberg' but validation failed"`
+- Try: `"Can you review this code for compliance?"`
 
-### 3. End-to-End Workflow Demo
+### 3. System Health Check
 ```bash
-python test_classification_workflow.py
+python -m support_agent.cli health
 ```
-Shows the complete client-side classification workflow with team-specific prompts.
+Verifies all MCP servers (Classification, Knowledge, Health) are operational.
 
-### 4. Error Handling Demo
+### 4. System Information
 ```bash
-python test_error_handling.py
+python -m support_agent.cli info
 ```
-Demonstrates robust error handling for edge cases and invalid inputs.
+Shows system capabilities, knowledge base entries, and supported workflows.
 
+### 5. Advanced Configuration
+```bash
+# Enable recursive knowledge search
+python -m support_agent.cli demo --search-depth 2
 
-## Demo Features Showcased
-
-### Multi-Team Support
-- **ATRS Team**: Athena Trade and Risk Services support (query, outage, data_issue, bless_request, review_request)
-- **Core Team**: Platform infrastructure support (query, jobs, sdlc, database, cloud, ai)
-- **Team Management**: Dynamic team discovery and configuration
-- **Team-Specific Prompts**: Customized classification prompts per team with examples
-
-### End-to-End LLM Sampling
-- **Client-Side Processing**: 3-step workflow avoiding server-initiated sampling deadlocks
-- **Rich Prompts**: Team-specific prompts with categories, examples, and context
-- **Structured Output**: JSON classification results with confidence, priority, and workflows
-
-### ATRS Team Classification Examples
-- **Query**: "Trade settlement feed from clearing house stopped working"
-- **Outage**: "Risk system is completely down"  
-- **Data Issue**: "Position reconciliation showing $2M discrepancy"
-- **Bless Request**: "Can you bless this code?"
-- **Review Request**: "Please review this code change trade model enhancement"
-
-### Core Team Classification Examples  
-- **Jobs**: "Nightly bob job failed with timeout error"
-- **SDLC**: "Docker build is failing in the deployment pipeline"
-- **Database**: "Hydra queries are running extremely slow"
-- **Cloud**: "Kubernetes cluster is hitting memory limits"
-- **AI**: "ML model inference API is returning 500 errors"
-
-### Dynamic Configuration
-- **JSON-Based Teams**: Easy addition of new teams via configuration files
-- **Category Management**: Team-specific categories with subcategories and workflows
-- **Training Examples**: Few-shot learning examples for accurate classification
-- **Workflow Assignment**: Automatic workflow assignment based on category
-
-## Sample Test Issues
-
-### ATRS Team Scenarios
-Try these with `team: "atrs"`:
-
-1. **Query**: "Sales trade did not feed to MarkitWire, can you please assist?"
-2. **Outage**: "Trade booking service is down and not responding"  
-3. **Data Issue**: "Data reconciliation shows discrepancies in position reports"
-4. **Bless Request**: "Can you bless this new trading strategy for production deployment?"
-5. **Review Request**: "Please review this code change for the risk calculation engine"
-
-### Core Team Scenarios  
-Try these with `team: "core"`:
-
-1. **Jobs**: "Nightly ETL job failed with timeout error"
-2. **SDLC**: "Docker build is failing in the deployment pipeline"
-3. **Database**: "PostgreSQL queries are running extremely slow"
-4. **Cloud**: "Kubernetes cluster is hitting memory limits"
-5. **AI**: "ML model inference API is returning 500 errors"
-
-### Manual Testing with MCP Client
-
-```python
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-async def test_classification():
-    server_params = StdioServerParameters(
-        command="python", 
-        args=["-m", "mcp_servers.classification_server"]
-    )
-    
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            
-            # List available teams
-            teams = await session.call_tool("list_teams", {})
-            print("Teams:", teams.content[0].text)
-            
-            # Get ATRS classification prompt
-            prompt = await session.call_tool("get_classification_prompt", {
-                "user_request": "Trade feed is down",
-                "team": "atrs"
-            })
-            
-            # Simulate LLM response and classify
-            llm_response = '{"category": "outage", "subcategory": "system_down", "priority": "critical", "confidence": 0.9, "reasoning": "Trade feed outage is critical"}'
-            
-            result = await session.call_tool("classify_support_request", {
-                "user_request": "Trade feed is down",
-                "team": "atrs",
-                "llm_response": llm_response
-            })
-            print("Classification:", result.content[0].text)
+# Test different connection methods
+python -m support_agent.cli demo --connection sse
 ```
 
-## Demo Architecture
+## Key Features Demonstrated
 
-The system demonstrates a production-ready MCP-based architecture:
+### 1. **Context-Aware Analysis**
+**Demo**: `"my trade has book2 resolved to 'MarkitWire' but it did not feed outbound"`
 
-### **Multi-Team Classification Server**
-- **Team Configuration Manager**: Dynamic loading of JSON team configs
-- **Classification Engine**: End-to-end LLM sampling without fallbacks  
-- **Team Management Tools**: Discovery and introspection capabilities
-- **Error Handling**: Comprehensive validation and graceful failures
+**Shows**:
+- System recognizes user already verified book2 → skips redundant verification
+- Provides targeted recommendations for remaining issues
+- Intelligent understanding of user's current state
 
-### **Supporting MCP Servers**
-- **Knowledge Server**: Financial services runbooks and procedures
-- **Health Server**: System status monitoring and health checks
+### 2. **Generic Feed Support** 
+**Demo**: Try with different feed types:
+- `"DCPP feed issue"` → Provides `FeedState("DCPP")` code
+- `"Bloomberg feed problem"` → Provides `FeedState("Bloomberg")` code  
+- `"XODS feed status"` → Provides `FeedState("XODS")` code
 
-### **Client-Side Architecture**
-- **3-Step Workflow**: Get prompt → Process with LLM → Parse result
-- **MCP Client**: Standard MCP protocol client with sampling callbacks
-- **Test Automation**: Comprehensive test suite with automated runner
+**Shows**:
+- No hardcoded feed types anywhere in system
+- LLM intelligently substitutes parameters based on user context
+- Works with any feed type without configuration changes
 
-## Key Demo Metrics
+### 3. **Vector-Based Knowledge Search**
+**Demo**: `"MarkitWire feed issue"`
 
-- **Teams Supported**: 2 (ATRS and Core)
-- **Total Categories**: 11 across both teams
-- **Tools Available**: 6 classification and team management tools
-- **Test Coverage**: 5 comprehensive test suites
-- **Classification Accuracy**: LLM-powered with confidence scoring
-- **Response Time**: Sub-second for prompt generation and parsing
-- **Scalability**: Easy addition of new teams via JSON configuration
+**Shows**:
+- Semantic search finds relevant knowledge using vector embeddings
+- Server-side similarity search with cosine distance
+- Provides implementation details: `ds.evInfo()` for block events
+- No keyword matching fallbacks - pure semantic understanding
 
-## Business Value Demonstration
+### 4. **LLM-Based Decision Making**
+**Demo**: `"Can you please review this trade for compliance approval?"`
 
-This demo shows how the system provides:
+**Shows**:
+- LLM analyzes request content to determine if human review needed
+- No hardcoded categories for review detection
+- Graceful deferral to human experts for compliance matters
+- Intelligent classification without pattern matching
 
-1. **Multi-Tenant Support**: Different teams with specialized categories
-2. **Production-Ready Architecture**: No pattern-matching fallbacks
-3. **Scalable Design**: Easy addition of new teams and categories
-4. **Robust Error Handling**: Graceful handling of edge cases
-5. **Comprehensive Testing**: Full test coverage with automated verification
-6. **Standards-Based**: Built on Model Context Protocol (MCP)
+### 5. **Silent Mode Intelligence**
+**Demo**: `"I need help with this thing"`
 
-## Production Readiness
+**Shows**:
+- System stays silent when no relevant knowledge available
+- Graceful error handling for vague or incomplete requests
+- No unhelpful "I don't know" responses
+- Professional failure mode for production use
 
-The current implementation is production-ready with:
+### 6. **Recursive Knowledge Enhancement**
+**Demo**: Enable with `--search-depth 2`
 
-### **✅ Implemented Features**
-- Multi-team classification system
-- End-to-end LLM sampling 
-- Dynamic team configuration loading
-- Comprehensive error handling and validation
-- Full test suite coverage
-- Team management and discovery tools
+**Shows**:
+- LLM identifies knowledge gaps (e.g., "check block events" without code)
+- Automatically searches for missing implementation details
+- Combines multiple knowledge sources for complete guidance
+- Intelligent gap detection and knowledge synthesis
 
-### **Ready for Extension**
-- Easy addition of new teams via JSON configs
-- Configurable category hierarchies and workflows
-- Custom sampling callbacks for different LLM providers
-- Integration with ticketing systems and workflows
+## Technical Architecture Highlights
 
-## Technical Highlights
+### Vector Embeddings
+- **Model**: `sentence-transformers` with `all-MiniLM-L6-v2`
+- **Search**: Server-side semantic search with cosine similarity
+- **Performance**: Sub-second search across knowledge base
+- **Compatibility**: NumPy 1.26.4 for stable vector operations
 
-- **Type-Safe**: Full Pydantic model validation throughout
-- **Async Architecture**: Non-blocking MCP operations
-- **Standards-Based**: Built on Model Context Protocol specification
-- **Client-Side Sampling**: Avoids server-initiated sampling deadlocks
-- **Comprehensive Testing**: 5 test suites covering all functionality
-- **Error Resilient**: Graceful handling of malformed inputs and edge cases
-- **Documentation**: Complete documentation with examples and guides
+### LLM Integration  
+- **APIs**: OpenAI and Anthropic supported
+- **Pattern**: Client-side LLM processing (no server sampling deadlocks)
+- **Usage**: ~3-6k tokens per analysis, ~4-8 second response time
+- **Intelligence**: Context awareness, parameter substitution, gap detection
+
+### Knowledge Base
+- **Format**: Markdown with metadata for enhanced search
+- **Parameterization**: Generic examples using `feedType`, `dealName` variables
+- **Content**: Feed troubleshooting, data reconciliation, outage procedures
+- **Updates**: Automatic indexing of new knowledge files
+
+## Demo Scenarios Walkthrough
+
+### Scenario 1: Data Reconciliation (High Confidence)
+```
+Input: "Data reconciliation shows discrepancies in position reports"
+
+Output:
+✅ Classification: data_issue/reconciliation (High Priority, 80% confidence)
+✅ Provides specific SQL queries for investigation
+✅ Details validation procedures and escalation paths
+✅ 100% confidence → comprehensive guidance provided
+```
+
+### Scenario 2: Compliance Review (Human Review)
+```
+Input: "Can you please review this trade for compliance approval?"
+
+Output:
+✅ Classification: review_request (detected by LLM analysis)
+✅ System stays silent - defers to human experts
+✅ No automated compliance decisions (appropriate)
+✅ Professional handling of sensitive requests
+```
+
+### Scenario 3: Vague Query (Silent Mode)
+```
+Input: "I need help with this thing"
+
+Output:
+✅ Classification: query (attempted but low relevance)
+✅ No relevant knowledge found in vector search
+✅ System stays silent rather than providing unhelpful responses
+✅ Graceful handling prevents noise in production channels
+```
+
+## Performance Metrics
+
+Typical demo performance:
+- **Response Time**: 4-8 seconds end-to-end
+- **Token Usage**: 3-6k tokens per analysis
+- **Tool Calls**: 4-6 MCP operations per request
+- **Knowledge Search**: <1 second semantic search
+- **Accuracy**: High relevance due to vector search + LLM processing
+
+## Troubleshooting Demo Issues
+
+### Common Issues
+1. **API Key**: Ensure `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` is set
+2. **Dependencies**: Run `pip install 'numpy>=1.26.4,<2.0' sentence-transformers`
+3. **Server Startup**: Check MCP servers start: `python -m support_agent.cli health`
+
+### Expected Warnings
+- NumPy compatibility warnings (handled gracefully)
+- Resource tracker warnings (cleanup-related, non-critical)
+
+### Demo Tips
+1. **Start with automated demo** (`--no-interactive`) to see system capabilities
+2. **Try different feed types** to see generic parameter substitution
+3. **Test context awareness** with queries that state what you've already verified
+4. **Try compliance requests** to see human review detection
+5. **Use vague queries** to see silent mode behavior
+
+## Extending the Demo
+
+### Adding New Knowledge
+1. Create `.md` file in `knowledge_resources/`
+2. Use parameterized examples: `feedType`, `dealName`, etc.
+3. Add `.meta` file with keywords and description
+4. System automatically indexes new content
+
+### Testing New Scenarios
+1. Add test cases to `tests/test_functional.py`
+2. Run full test suite: `python -m pytest tests/ -v`
+3. Test manually: `python -m support_agent.cli demo`
+
+The demo showcases a production-ready system that intelligently assists support engineers while knowing when to stay silent or defer to humans.

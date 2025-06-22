@@ -38,7 +38,8 @@ def demo(
     no_interactive: Annotated[bool, typer.Option("--no-interactive", help="Run sample scenarios instead of interactive mode")] = False,
     engineer_id: Annotated[str, typer.Option("--engineer", "-e", help="Engineer ID")] = "demo-engineer",
     lob: Annotated[str, typer.Option("--lob", "-l", help="Line of Business")] = "platform",
-    connection: Annotated[str, typer.Option("--connection", "-c", help="MCP connection method")] = "stdio"
+    connection: Annotated[str, typer.Option("--connection", "-c", help="MCP connection method")] = "stdio",
+    search_depth: Annotated[int, typer.Option("--search-depth", "-d", help="Knowledge search recursion depth (0=disabled, 1=single-level, 2+=recursive)")] = 1
 ):
     """Run the support agent demo in interactive or automated mode.
     
@@ -55,10 +56,12 @@ def demo(
         engineer_id: Identifier for the engineer submitting requests.
         lob: Line of business context for request routing.
         connection: MCP connection method ('stdio' or 'sse').
+        search_depth: Maximum levels of recursive knowledge enhancement (0=disabled, 1=single-level, 2+=recursive).
     """
     
     # Create MCP configuration
     config = MCPConfig()
+    config.knowledge_search_depth = search_depth
     if connection == "sse":
         config.connection_method = ConnectionMethod.SSE
     elif connection == "stdio":
@@ -70,7 +73,7 @@ def demo(
     console.print(Panel.fit(
         f"[bold yellow]AI Production Support Assistant[/bold yellow]\n"
         f"[dim]Phase 1 Demo - Analysis & Recommendations for Support Engineers[/dim]\n"
-        f"[dim]Connection: {connection.upper()}[/dim]",
+        f"[dim]Connection: {connection.upper()} | Knowledge Search Depth: {search_depth}[/dim]",
         style="yellow"
     ))
     

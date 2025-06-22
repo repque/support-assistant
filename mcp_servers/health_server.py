@@ -71,7 +71,8 @@ def _initialize_mock_data():
     
     # Create mock log entries
     log_levels = ["INFO", "WARN", "ERROR", "DEBUG"]
-    error_patterns = [
+    # Demo error patterns for mock data generation only (not used for analysis)
+    demo_error_patterns = [
         "Connection timeout", "Database lock timeout", "Invalid request format",
         "Authentication failed", "Service unavailable", "Memory allocation error"
     ]
@@ -88,7 +89,7 @@ def _initialize_mock_data():
         
         # Generate realistic log messages
         if level == "ERROR":
-            message = f"[{random.choice(error_patterns)}] {random.choice(['Request ID: REQ-' + str(random.randint(1000, 9999)), 'User ID: USR-' + str(random.randint(100, 999))])}"
+            message = f"[{random.choice(demo_error_patterns)}] {random.choice(['Request ID: REQ-' + str(random.randint(1000, 9999)), 'User ID: USR-' + str(random.randint(100, 999))])}"
         elif level == "WARN":
             message = f"High {random.choice(['CPU', 'memory', 'disk'])} usage detected: {random.randint(70, 95)}%"
         else:
@@ -218,24 +219,21 @@ def analyze_service_logs(service_name: str, hours_back: int = 1) -> Dict:
             "time_range": f"{start_time.isoformat()} to {end_time.isoformat()}",
             "total_entries": 0,
             "level_breakdown": {},
-            "error_patterns": {},
+            "error_messages": [],
             "summary": f"No log entries found for {service_name} in the last {hours_back} hour(s)"
         }
     
     # Analyze log levels
     level_counts = {}
-    error_patterns = {}
+    error_messages = []
     
     for entry in service_logs:
         level = entry["level"]
         level_counts[level] = level_counts.get(level, 0) + 1
         
         if level == "ERROR":
-            # Extract error patterns
-            message = entry["message"]
-            for pattern in ["timeout", "failed", "error", "unavailable", "invalid"]:
-                if pattern.lower() in message.lower():
-                    error_patterns[pattern] = error_patterns.get(pattern, 0) + 1
+            # Collect error messages for LLM analysis instead of pattern matching
+            error_messages.append(entry["message"])
     
     # Generate summary
     total_logs = len(service_logs)
@@ -248,9 +246,10 @@ def analyze_service_logs(service_name: str, hours_back: int = 1) -> Dict:
         error_rate = (error_count / total_logs) * 100
         summary += f"Found {error_count} errors ({error_rate:.1f}% error rate). "
         
-        if error_patterns:
-            top_pattern = max(error_patterns.items(), key=lambda x: x[1])
-            summary += f"Most common error pattern: {top_pattern[0]} ({top_pattern[1]} occurrences). "
+        if error_messages:
+            # For demo purposes, show sample error messages instead of pattern analysis
+            sample_errors = error_messages[:3]  # Show first 3 error messages
+            summary += f"Sample error messages: {'; '.join(sample_errors)}. "
     
     if warn_count > 0:
         warn_rate = (warn_count / total_logs) * 100
@@ -264,7 +263,7 @@ def analyze_service_logs(service_name: str, hours_back: int = 1) -> Dict:
         "time_range": f"{start_time.isoformat()} to {end_time.isoformat()}",
         "total_entries": total_logs,
         "level_breakdown": level_counts,
-        "error_patterns": error_patterns,
+        "error_messages": error_messages[:10] if error_messages else [],  # Return up to 10 error messages for LLM analysis
         "summary": summary
     }
 

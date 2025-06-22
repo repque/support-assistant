@@ -1,6 +1,6 @@
 # AI Production Support Assistant
 
-A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues across multiple teams using Model Context Protocol (MCP) architecture.
+A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues using Model Context Protocol (MCP) architecture and vector-based semantic search.
 
 ## Quick Start
 
@@ -11,12 +11,12 @@ pip install -e .
 
 ### 2. Run Tests
 ```bash
-python run_tests.py
+python -m pytest tests/ -v
 ```
 
-### 3. Start Support Assistant
+### 3. Demo Mode (Automated Scenarios)
 ```bash
-python -m support_agent.cli
+python -m support_agent.cli demo --no-interactive
 ```
 
 ### 4. Demo Mode (Interactive)
@@ -24,43 +24,51 @@ python -m support_agent.cli
 python -m support_agent.cli demo
 ```
 
-### 5. Demo Mode (Automated Scenarios)
-```bash
-python -m support_agent.cli demo --no-interactive
-```
-
-### 6. System Health Check
+### 5. System Health Check
 ```bash
 python -m support_agent.cli health
 ```
 
-### 7. System Information
+### 6. System Information
 ```bash
 python -m support_agent.cli info
 ```
 
-Example support request:
+## Example Usage
+
 ```
-> My MarkitWire feed isn't sending outbound messages
+> my trade has book2 resolved to 'MarkitWire' but it did not feed outbound
 
 Classification: query/feed_issue (High Priority, 85% confidence)
-Resolution Steps:
-   1. Check feed status: SELECT * FROM trade_feeds WHERE feed_name = 'MarkitWire'
-   2. Verify connectivity: curl -H "Authorization: Bearer $TOKEN" https://api.markitwire.com/status
-   3. Review validation results and check downstream systems
-Confidence: 100% → Provides comprehensive guidance
-Performance: 5 tools, 3,500 tokens, 4.2 seconds
+
+## Immediate Actions
+1. **Check for Block Events:**
+   ```python
+   deal = ro(dealName)
+   fs = deal.FeedState("MarkitWire")
+   dt = fs._DownstreamTrades()[0]
+   dt.validate() # investigate validation failures
+   ```
+
+2. **Check Downstream Events:**
+   ```python
+   deal = ro(dealName)
+   ds = deal.DownstreamState("MarkitWire")
+   ds.evInfo() # prints downstream events, block events
+   ```
+
+Performance: 6 tools, 5.9k tokens, 6.8 seconds
 ```
 
-## Features
+## Key Features
 
-✅ **Intelligent Analysis**: End-to-end support request analysis with confidence scoring  
-✅ **Multi-Team Support**: ATRS and Core teams with distinct category sets  
-✅ **Knowledge Integration**: Contextual recommendations from knowledge base  
-✅ **Health Monitoring**: System status checks and diagnostic guidance  
-✅ **Anti-Hallucination**: 60% confidence threshold with silent mode for uncertain cases  
-✅ **Client-Side LLM**: Avoids server-initiated sampling deadlocks  
-✅ **Production Ready**: Comprehensive error handling and full test coverage  
+✅ **Context-Aware Analysis**: Skips redundant steps based on user's stated facts  
+✅ **Vector-Based Search**: Semantic search using sentence transformers for knowledge retrieval  
+✅ **Generic Feed Support**: Intelligent parameter substitution for any feed type (MarkitWire, DCPP, XODS, Bloomberg, etc.)  
+✅ **LLM-Based Decisions**: No hardcoded business logic - all decisions made by LLM  
+✅ **Multi-Team Support**: ATRS team with extensible architecture  
+✅ **Silent Mode**: Stays silent when no relevant knowledge is available  
+✅ **Production Ready**: Comprehensive error handling and robust architecture  
 
 ## Team Categories
 
@@ -68,106 +76,131 @@ Performance: 5 tools, 3,500 tokens, 4.2 seconds
 - `query` - Technical questions and troubleshooting
 - `outage` - System outages and service disruptions  
 - `data_issue` - Data quality and reconciliation problems
-- `bless_request` - Code deployment approvals
-- `review_request` - Code and architecture reviews
-
-### Core Team (Platform Infrastructure)  
-- `query` - General technical guidance
-- `jobs` - Batch jobs and ETL processes
-- `sdlc` - CI/CD, builds, and deployments
-- `database` - Database performance and connectivity
-- `cloud` - Cloud infrastructure and scaling
-- `ai` - AI/ML model deployment and inference
+- `bless_request` - Code deployment approvals (deferred to human review)
+- `review_request` - Code and architecture reviews (deferred to human review)
 
 ## Core Capabilities
 
-1. **Support Request Analysis** - Comprehensive analysis with confidence scoring
-2. **Multi-Team Classification** - ATRS and Core team-specific categorization  
-3. **Knowledge Base Integration** - Contextual recommendations from documentation
-4. **Health Status Monitoring** - System status checks and diagnostics
-5. **Intelligent Decision Making** - Silent mode for low confidence scenarios
-6. **Performance Tracking** - Token usage and response time monitoring
+1. **Intelligent Request Analysis** - Context-aware analysis with vector search
+2. **Generic Feed Troubleshooting** - Works with any feed type without hardcoding  
+3. **Vector Knowledge Search** - Semantic similarity search across knowledge base
+4. **LLM-Based Gap Detection** - Identifies missing implementation details and searches recursively
+5. **Smart Parameter Substitution** - Adapts code examples to user's specific context
+6. **Silent Mode Decision Making** - Uses LLM to determine when to defer to humans
 
 ## Architecture
 
 ```
 support_agent/
-├── assistant.py               # Main support assistant engine
+├── assistant.py               # Main orchestrator with vector search integration
 ├── cli.py                    # Command-line interface
 ├── config.py                 # Configuration management
 └── models.py                 # Pydantic data models
 
 mcp_servers/
 ├── categories/
-│   ├── atrs.json              # ATRS team configuration
-│   └── core.json              # Core team configuration  
-├── classification_server.py   # Multi-team classification MCP server
-├── knowledge_server.py        # Knowledge base MCP server
-└── health_server.py          # Health monitoring MCP server
+│   └── atrs.json              # ATRS team configuration
+├── classification_server.py   # LLM-based classification server
+├── knowledge_server.py        # Vector search knowledge server
+└── health_server.py          # Health monitoring server
 
-knowledge_resources/           # Knowledge base content
-└── tests/                    # Comprehensive test suite
+knowledge_resources/           # Generic knowledge base
+├── trade_feed_troubleshooting.md      # Generic feed troubleshooting
+├── feed_framework_troubleshooting.md  # Feed framework commands
+├── data_reconciliation.md              # Data issue procedures
+└── outage_investigation.md             # Outage response procedures
+
+tests/
+└── test_functional.py         # Comprehensive functional tests
+```
+
+## Key Architectural Decisions
+
+### 1. **Vector Embeddings for Knowledge Search**
+- Uses `sentence-transformers` with `all-MiniLM-L6-v2` model
+- Server-side semantic search with cosine similarity
+- No fallback to keyword matching - requires proper vector search
+
+### 2. **LLM-Based Decision Making**
+- Request handling decisions made by LLM analysis
+- Gap detection uses LLM to find missing implementation details
+- Context awareness through intelligent prompt engineering
+- No hardcoded business logic anywhere in the system
+
+### 3. **Generic Knowledge Base**
+- All knowledge files use parameterized examples (`feedType`, `dealName`)
+- LLM intelligently substitutes parameters based on user context
+- Works with any feed type: MarkitWire, DCPP, XODS, Bloomberg, Reuters, etc.
+- No feed-type-specific hardcoded knowledge
+
+### 4. **Client-Side LLM Pattern**
+```mermaid
+sequenceDiagram
+    Assistant->>Classification: Get prompt for request
+    Assistant->>LLM: Process prompt
+    Assistant->>Classification: Parse LLM response
+    Assistant->>Knowledge: Vector search
+    Assistant->>LLM: Generate recommendations
+```
+
+## Requirements
+
+- Python 3.12+
+- OpenAI or Anthropic API key for LLM processing
+- `sentence-transformers` for vector embeddings
+- `numpy>=1.26.4,<2.0` (for vector compatibility)
+
+## Environment Variables
+
+```bash
+export OPENAI_API_KEY="your-openai-key"
+# OR
+export ANTHROPIC_API_KEY="your-anthropic-key"
 ```
 
 ## Testing
 
-The system includes comprehensive tests in the `tests/` directory:
+The system includes comprehensive functional tests:
 
-- **`tests/test_system_overview.py`** - Complete system capabilities
-- **`tests/test_multi_team_classification.py`** - Multi-team functionality  
-- **`tests/test_classification_workflow.py`** - End-to-end workflow
-- **`tests/test_error_handling.py`** - Error handling and edge cases
-- **`tests/test_knowledge.py`** - Knowledge server integration
+- **CLI Integration Tests** - Tests all CLI commands end-to-end
+- **Vector Search Tests** - Verifies semantic search functionality  
+- **Context Awareness Tests** - Tests parameter substitution and context handling
+- **Human Review Detection** - Tests LLM-based decision making
+- **Generic Feed Support** - Tests feed type substitution across different feeds
 
-Run all tests: `python run_tests.py`
-
-See [TESTING.md](TESTING.md) for detailed testing documentation.
+Run tests: `python -m pytest tests/ -v`
 
 ## Configuration
 
-### Adding New Teams
-
-1. Create team configuration file in `mcp_servers/categories/`:
-```json
-{
-  "team_info": {
-    "name": "New Team",
-    "description": "Team description",
-    "domain": "team_domain"
-  },
-  "categories": {
-    "category_name": {
-      "description": "Category description",
-      "subcategories": ["sub1", "sub2"],
-      "workflow": "workflow_name"
-    }
-  },
-  "training_examples": [
-    {
-      "text": "Example request",
-      "category": "category_name", 
-      "subcategory": "sub1",
-      "priority": "high",
-      "reasoning": "Why this classification"
-    }
-  ]
-}
+### Knowledge Search Depth
+Control recursive knowledge search depth:
+```bash
+python -m support_agent.cli demo --search-depth 2  # Recursive search
+python -m support_agent.cli demo --search-depth 1  # Single-level (default)
 ```
 
-2. Restart the server - teams are loaded automatically
+### Adding New Knowledge
+1. Create markdown file in `knowledge_resources/`
+2. Use parameterized examples with `feedType`, `dealName`, etc.
+3. Add metadata file with keywords for better search ranking
+4. System automatically indexes on startup
 
-### Client-Side LLM Integration
+### Example Knowledge File
+```markdown
+# Generic Troubleshooting Guide
 
-The server uses a 3-step client-side approach to avoid deadlocks:
+## Commands
+```python
+deal = ro(dealName)
+fs = deal.FeedState(feedType)  # Use specific feed name like "DCPP", "Bloomberg"
+fs.FeedStatus()
+```
 
-1. **Get Prompt**: Client requests team-specific classification prompt
-2. **Process with LLM**: Client sends prompt to their LLM service  
-3. **Parse Result**: Client sends LLM response back for parsing and validation
-
-This architecture ensures the server never initiates sampling requests that could cause deadlocks.
+The LLM will automatically substitute `feedType` with the actual feed type from user queries.
 
 ## Documentation
 
-- [DESIGN.md](DESIGN.md) - System design documentation
-- [DEMO_GUIDE.md](DEMO_GUIDE.md) - Demo walkthrough guide
+- [DESIGN.md](DESIGN.md) - System architecture and design decisions
+- [DEMO_GUIDE.md](DEMO_GUIDE.md) - Demo walkthrough guide  
 - [TESTING.md](TESTING.md) - Testing guide and documentation
+- [simplified_flow_diagram.md](simplified_flow_diagram.md) - System flow overview

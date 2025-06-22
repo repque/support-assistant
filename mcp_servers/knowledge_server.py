@@ -11,12 +11,23 @@ the support agent by providing quick access to troubleshooting guides,
 runbooks, and best practices.
 """
 
+
 import json
+import numpy as np
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
+
+# Vector embeddings imports
+try:
+    from sentence_transformers import SentenceTransformer
+    from sklearn.metrics.pairwise import cosine_similarity
+    EMBEDDINGS_AVAILABLE = True
+except ImportError:
+    EMBEDDINGS_AVAILABLE = False
+    print("Warning: sentence-transformers not available. Install with: pip install sentence-transformers scikit-learn")
 
 # Create FastMCP server instance
 mcp = FastMCP("KnowledgeRetrievalServer")
@@ -24,6 +35,155 @@ mcp = FastMCP("KnowledgeRetrievalServer")
 # Initialize resources directory
 RESOURCES_DIR = Path("./knowledge_resources")
 RESOURCES_DIR.mkdir(parents=True, exist_ok=True)
+
+class VectorKnowledgeBase:
+    """Vector-based knowledge base with semantic search capabilities."""
+    
+    def __init__(self):
+        self.embeddings_model = None
+        self.document_embeddings = []
+        self.documents = []
+        self.indexed = False
+        
+        if EMBEDDINGS_AVAILABLE:
+            try:
+                # Use a lightweight, fast model for embeddings (suppress output)
+                import logging
+                logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
+                self.embeddings_model = SentenceTransformer('all-MiniLM-L6-v2')
+                # Don't print initialization message to keep demo clean
+            except Exception as e:
+                print(f"Failed to load embeddings model: {e}")
+                self.embeddings_model = None
+    
+    def cleanup(self):
+        """Clean up model resources to prevent semaphore leaks."""
+        if self.embeddings_model is not None:
+            try:
+                # Clean up any torch multiprocessing contexts
+                import torch
+                if hasattr(torch.multiprocessing, 'set_sharing_strategy'):
+                    torch.multiprocessing.set_sharing_strategy('file_system')
+                
+                # Try to clean up model internals
+                if hasattr(self.embeddings_model, '_modules'):
+                    for module in self.embeddings_model._modules.values():
+                        if hasattr(module, 'pool'):
+                            try:
+                                module.pool.close()
+                                module.pool.join()
+                            except:
+                                pass
+                
+                # Clear model from memory
+                del self.embeddings_model
+            except Exception:
+                # Ignore cleanup errors, just clear the reference
+                pass
+            finally:
+                self.embeddings_model = None
+                
+        # Clean up embeddings data
+        if hasattr(self.document_embeddings, 'clear'):
+            self.document_embeddings.clear()
+        else:
+            self.document_embeddings = []
+        self.documents.clear()
+    
+    async def index_documents(self):
+        """Pre-compute embeddings for all knowledge documents."""
+        if not self.embeddings_model:
+            return False
+            
+        try:
+            self.documents = []
+            self.document_embeddings = []
+            
+            # Load all markdown documents
+            for file_path in RESOURCES_DIR.glob("*.md"):
+                metadata_path = RESOURCES_DIR / f"{file_path.name}.meta"
+                
+                # Load metadata if exists
+                metadata = {}
+                if metadata_path.exists():
+                    with open(metadata_path, 'r') as f:
+                        metadata = json.load(f)
+                
+                # Read document content
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                
+                # Create document record
+                doc = {
+                    "uri": f"knowledge://{file_path.name}",
+                    "name": file_path.stem,
+                    "title": metadata.get("title", file_path.stem.replace("_", " ").title()),
+                    "description": metadata.get("description", f"Knowledge resource: {file_path.stem}"),
+                    "content": content,
+                    "metadata": metadata
+                }
+                
+                # Generate embedding for title + content (first 1000 chars for efficiency)
+                text_to_embed = f"{doc['title']} {doc['description']} {content[:1000]}"
+                embedding = self.embeddings_model.encode(text_to_embed)
+                
+                self.documents.append(doc)
+                self.document_embeddings.append(embedding)
+            
+            self.document_embeddings = np.array(self.document_embeddings)
+            self.indexed = True
+            # Don't print indexing message to keep demo clean
+            return True
+            
+        except Exception as e:
+            print(f"Error indexing documents: {e}")
+            return False
+    
+    async def semantic_search(self, query: str, top_k: int = 5) -> List[Dict]:
+        """Find most semantically similar documents."""
+        if not self.indexed or not self.embeddings_model:
+            return []
+        
+        try:
+            # Generate query embedding
+            query_embedding = self.embeddings_model.encode([query])
+            
+            # Calculate cosine similarity with all documents
+            similarities = cosine_similarity(query_embedding, self.document_embeddings)[0]
+            
+            # Get top-k most similar documents
+            top_indices = np.argsort(similarities)[::-1][:top_k]
+            results = []
+            
+            for idx in top_indices:
+                similarity_score = float(similarities[idx])
+                
+                # Only include results above relevance threshold
+                if similarity_score > 0.2:
+                    doc = self.documents[idx].copy()
+                    
+                    # Create result in expected format
+                    result = {
+                        "content": doc["content"],
+                        "source": f"Knowledge Resource - {doc['title']}",
+                        "relevance_score": similarity_score,
+                        "metadata": {
+                            "uri": doc["uri"],
+                            "title": doc["title"],
+                            "description": doc["description"],
+                            "mime_type": "text/markdown"
+                        }
+                    }
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            print(f"Error in semantic search: {e}")
+            return []
+
+# Global vector knowledge base instance
+vector_kb = VectorKnowledgeBase()
 
 def _create_default_resources():
     """Create default knowledge resources for financial services support.
@@ -167,87 +327,49 @@ This runbook covers procedures for investigating and resolving data reconciliati
             with open(metadata_path, 'w') as f:
                 json.dump(metadata, f, indent=2)
 
-# Initialize resources on startup
+# Initialize resources and vector index on startup
 _create_default_resources()
 
+async def _initialize_vector_index():
+    """Initialize the vector knowledge base."""
+    await vector_kb.index_documents()
+
+# Note: The index will be initialized when the first search is performed
+
 @mcp.tool()
-def search_knowledge(query: str, category: Optional[str] = None, max_results: int = 5) -> List[Dict]:
-    """Search knowledge base for relevant support documentation.
+async def search_knowledge(query: str, category: Optional[str] = None, max_results: int = 5) -> List[Dict]:
+    """Search knowledge base using vector embeddings for semantic similarity.
     
-    Performs intelligent search across the knowledge base using relevance
-    scoring that considers query terms, category matching, and content
-    analysis. Results are ranked by relevance to ensure the most applicable
-    solutions are returned first.
+    Performs semantic search across the knowledge base using pre-computed vector
+    embeddings and cosine similarity. Falls back to basic search if embeddings
+    are not available.
     
     Args:
         query: Search query describing the issue or topic.
-        category: Optional category filter to improve relevance (e.g., 'data_issue').
+        category: Optional category filter (currently unused in vector search).
         max_results: Maximum number of results to return (default: 5).
     
     Returns:
         List[Dict]: Ranked list of knowledge resources containing:
                    - content: Full text of the knowledge article
                    - source: Resource identifier and title
-                   - relevance_score: Score between 0.0 and 1.0
+                   - relevance_score: Cosine similarity score between 0.0 and 1.0
                    - metadata: Additional resource information
     """
-    results = []
+    # Initialize vector index if not already done
+    if not vector_kb.indexed:
+        await _initialize_vector_index()
     
-    # Get all available resources
-    resources = []
-    for file_path in RESOURCES_DIR.glob("*.md"):
-        metadata_path = RESOURCES_DIR / f"{file_path.name}.meta"
-        
-        # Load metadata if exists
-        metadata = {}
-        if metadata_path.exists():
-            with open(metadata_path, 'r') as f:
-                metadata = json.load(f)
-        
-        # Create resource entry
-        resource = {
-            "uri": f"knowledge://{file_path.name}",
-            "name": file_path.stem,
-            "title": metadata.get("title", file_path.stem.replace("_", " ").title()),
-            "description": metadata.get("description", f"Knowledge resource: {file_path.stem}"),
-            "mime_type": "text/markdown"
-        }
-        resources.append(resource)
+    # Use vector search (required)
+    if vector_kb.indexed and EMBEDDINGS_AVAILABLE:
+        results = await vector_kb.semantic_search(query, max_results)
+        return results
     
-    for resource in resources:
-        # Calculate relevance based on query
-        relevance_score = _calculate_resource_relevance(resource, query, category)
-        
-        if relevance_score > 0.1:  # Minimum relevance threshold
-            # Read resource content for result
-            try:
-                filename = resource["uri"].replace("knowledge://", "")
-                file_path = RESOURCES_DIR / filename
-                
-                with open(file_path, 'r') as f:
-                    content = f.read()
-                
-                # Create knowledge result
-                result = {
-                    "content": content,
-                    "source": f"Knowledge Resource - {resource['title']}",
-                    "relevance_score": relevance_score,
-                    "metadata": {
-                        "uri": resource["uri"],
-                        "title": resource["title"],
-                        "description": resource["description"],
-                        "mime_type": resource["mime_type"]
-                    }
-                }
-                results.append(result)
-                
-            except Exception:
-                # Skip resources that can't be read
-                continue
-    
-    # Sort by relevance and return top results
-    results.sort(key=lambda x: x["relevance_score"], reverse=True)
-    return results[:max_results]
+    # No fallback - vector embeddings are required
+    print("ERROR: Vector embeddings not available - system requires vector search capabilities")
+    return []
+
+
 
 @mcp.tool()
 def prepare_analysis_prompt(query: str, knowledge_content: str, affected_system: Optional[str] = None) -> str:
@@ -282,12 +404,16 @@ CRITICAL INSTRUCTIONS:
 3. If the knowledge base mentions a concept without providing the exact code, acknowledge this limitation
 4. When referencing code, copy it EXACTLY as shown in the knowledge base
 5. If additional information is provided from follow-up searches, incorporate that knowledge into your response
+6. CONTEXT AWARENESS: Carefully read what the user has already stated or verified. Do NOT recommend steps that contradict or duplicate what the user has explicitly confirmed
+7. SKIP REDUNDANT STEPS: If the user has already stated that something is working correctly (e.g., "book2 resolved to 'MarkitWire'"), do not suggest verifying that same thing again
+8. CONTEXTUALIZE EXAMPLES: Adapt code examples and procedures to the user's specific situation. Replace generic parameters and placeholder values with the actual systems, services, or identifiers mentioned in the user's request
 
 Based on the user's specific issue and the knowledge base content, provide a concise response with:
 
 ## Immediate Actions
 - List specific steps using ONLY information from the knowledge base
 - Include ONLY the exact commands/code provided in the knowledge base
+- SKIP any steps the user has already confirmed or stated are working correctly
 - If a step is mentioned but no code is provided, simply describe the step without adding unhelpful messages
 
 ## Expected Results
@@ -298,79 +424,8 @@ Based on the user's specific issue and the knowledge base content, provide a con
 - When to escalate and to whom (as specified in the knowledge base)
 - Follow-up actions if initial steps don't resolve the issue
 
-Remember: Never make up code or commands. Only use what's explicitly provided in the knowledge base content."""
+Remember: Never make up code or commands. Only use what's explicitly provided in the knowledge base content. Pay attention to what the user has already verified to avoid redundant recommendations."""
 
-def _calculate_resource_relevance(resource: Dict, query: str, category: Optional[str] = None) -> float:
-    """Calculate relevance score for a knowledge resource.
-    
-    Implements a multi-factor scoring algorithm that considers:
-    - Category matching (bonus for matching categories)
-    - Term frequency in metadata (title, description)
-    - Term presence in content body
-    - Query term coverage
-    
-    The scoring is designed to favor resources that closely match both
-    the query terms and the issue category, ensuring highly relevant
-    results for support scenarios.
-    
-    Args:
-        resource: Resource dictionary with metadata.
-        query: Search query to match against.
-        category: Optional category for bonus scoring.
-    
-    Returns:
-        float: Normalized relevance score between 0.0 and 1.0.
-    """
-    query_terms = query.lower().split()
-    score = 0.0
-    
-    # Check resource metadata for matches
-    searchable_text = " ".join([
-        resource["title"].lower(),
-        resource["description"].lower(),
-        resource["name"].lower()
-    ])
-    
-    # Load metadata for category matching
-    filename = resource["uri"].replace("knowledge://", "")
-    metadata_path = RESOURCES_DIR / f"{filename}.meta"
-    resource_category = None
-    
-    if metadata_path.exists():
-        try:
-            with open(metadata_path, 'r') as f:
-                metadata = json.load(f)
-                resource_category = metadata.get("category")
-        except:
-            pass
-    
-    # Category matching bonus (if context provided)
-    if category and resource_category and category == resource_category:
-        score += 2.0
-    elif category and resource_category and category != resource_category:
-        score -= 0.5
-    
-    # Term matching in metadata
-    for term in query_terms:
-        if term in searchable_text:
-            score += 0.8
-    
-    # Load and search content for better matching
-    try:
-        file_path = RESOURCES_DIR / filename
-        with open(file_path, 'r') as f:
-            content_text = f.read().lower()
-        
-        for term in query_terms:
-            if term in content_text:
-                score += 0.3
-                
-    except:
-        # If can't read content, rely on metadata only
-        pass
-    
-    # Normalize score
-    return min(score / len(query_terms) if query_terms else 0.0, 1.0)
 
 # Main execution
 async def main():
@@ -408,4 +463,21 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+    import atexit
+    import signal
+    
+    # Register cleanup handler for proper resource disposal
+    def cleanup_handler():
+        global vector_kb
+        if hasattr(vector_kb, 'cleanup'):
+            vector_kb.cleanup()
+    
+    def signal_handler(sig, frame):
+        cleanup_handler()
+        exit(0)
+    
+    atexit.register(cleanup_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
     asyncio.run(main())

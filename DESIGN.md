@@ -18,8 +18,8 @@ This document defines the technical architecture for an AI-powered production su
 │  │ Processor       │ │  Engine          │ │ Generator       │   │
 │  └─────────────────┘ └──────────────────┘ └─────────────────┘   │
 │  ┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐   │
-│  │ Context         │ │  Workflow        │ │ Confidence      │   │
-│  │ Manager         │ │  Orchestrator    │ │ Assessor        │   │
+│  │ Context         │ │  Workflow        │ │ Vector Search   │   │
+│  │ Manager         │ │  Orchestrator    │ │ Engine          │   │
 │  └─────────────────┘ └──────────────────┘ └─────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                                 │
@@ -229,17 +229,17 @@ class RecommendationGenerator:
     async def create_diagnostic_steps(self, issue_category: str, symptoms: List[str]) -> List[DiagnosticStep]
 ```
 
-#### 6. Confidence Assessor
+#### 6. Vector Search Engine
 ```python
-class ConfidenceAssessor:
+class VectorSearchEngine:
     """
-    Evaluates analysis confidence and determines when additional human expertise is needed.
-    Provides confidence scoring for recommendations.
+    Provides semantic search capabilities using vector embeddings for knowledge retrieval.
+    Handles document indexing and similarity-based search operations.
     """
     
-    async def assess_analysis_confidence(self, analysis: AnalysisResult) -> ConfidenceScore
-    async def should_recommend_escalation(self, confidence: ConfidenceScore, issue_severity: str) -> bool
-    async def generate_confidence_explanation(self, score: ConfidenceScore) -> str
+    async def semantic_search(self, query: str, top_k: int = 5) -> List[SearchResult]
+    async def index_documents(self) -> bool
+    async def get_relevance_score(self, query: str, document: str) -> float
 ```
 
 ### Data Models

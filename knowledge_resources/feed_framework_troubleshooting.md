@@ -14,12 +14,12 @@ fs = d.FeedState(feedType) # feedType can be "MarkitWire" or "XODS" etc.
 dt = fs._DownstreamTrades()[0]
 ```
 
-### 2. Check FeedStatus doe a given feed type
+### 2. Check FeedStatus for a given feed type
 **Symptoms:** Feed status checking 
 **Resolution Steps:**
 ```python
 deal = ro(dealName)
-fs = deal.FeedState("MarkitWire")
+fs = deal.FeedState(feedType)  # Use specific feed name like "DCPP", "Bloomberg", "Reuters" etc.
 fs.FeedStatus()
 ```
 
@@ -28,6 +28,6 @@ fs.FeedStatus()
 **Resolution Steps:**
 ```python
 deal = ro(dealName)
-ds = deal.DownstreamState(feedType)
+ds = deal.DownstreamState(feedType)  # Use specific feed name like "DCPP", "Bloomberg", "Reuters" etc.
 ds.evInfo() # this should print out downstream events, such as update events and block events
 ```

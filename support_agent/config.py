@@ -61,8 +61,10 @@ class MCPConfig(BaseModel):
     Attributes:
         connection_method: Default connection method for all servers.
         servers: Dictionary mapping server roles to their configurations.
+        knowledge_search_depth: Maximum levels of recursive knowledge enhancement (1 = no recursion).
     """
     connection_method: ConnectionMethod = ConnectionMethod.STDIO
+    knowledge_search_depth: int = 1
     servers: Dict[str, ServerConfig] = {
         "classification": ServerConfig(
             name="ClassificationServer",
