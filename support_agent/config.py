@@ -85,10 +85,12 @@ class MCPConfig(BaseModel):
         servers: Dictionary mapping server roles to their configurations.
         knowledge_search_depth: Maximum levels of recursive knowledge enhancement (1 = no recursion).
         llm: LLM provider configuration settings.
+        default_team: Default team for classification requests.
     """
     connection_method: ConnectionMethod = ConnectionMethod.STDIO
     knowledge_search_depth: int = 1
     llm: LLMConfig = LLMConfig()
+    default_team: str = os.getenv("DEFAULT_TEAM", "atrs")
     servers: Dict[str, ServerConfig] = {
         "classification": ServerConfig(
             name="ClassificationServer",
