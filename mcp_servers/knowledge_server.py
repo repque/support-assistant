@@ -288,7 +288,7 @@ Based on the user's specific issue and the knowledge base content, provide a con
 ## Immediate Actions
 - List specific steps using ONLY information from the knowledge base
 - Include ONLY the exact commands/code provided in the knowledge base
-- If a step is mentioned but no code is provided, say "Manual check required - specific command not provided"
+- If a step is mentioned but no code is provided, simply describe the step without adding unhelpful messages
 
 ## Expected Results
 - What to look for when executing these steps
