@@ -497,7 +497,7 @@ class SupportAssistant:
             )
             if not should_handle:
                 # Clear the status line
-                sys.stdout.write("\r" + " " * 80 + "\r")
+                sys.stdout.write("\r" + " " * 120 + "\r")
                 sys.stdout.flush()
                 _console.print(
                     f"[dim]Assistant staying silent - {classification.category} requires human review[/dim]"
@@ -556,7 +556,7 @@ class SupportAssistant:
             # Step 5: Simple decision - if we have knowledge, provide recommendations
             if not enhanced_knowledge_data or len(enhanced_knowledge_data) == 0:
                 # Clear the status line
-                sys.stdout.write("\r" + " " * 80 + "\r")
+                sys.stdout.write("\r" + " " * 120 + "\r")
                 sys.stdout.flush()
                 _console.print(
                     "[yellow]No relevant knowledge found - Assistant staying silent[/yellow]"
@@ -574,7 +574,7 @@ class SupportAssistant:
             # If no knowledge-based recommendations, stay silent
             if recommendations is None:
                 # Clear the status line
-                sys.stdout.write("\r" + " " * 80 + "\r")
+                sys.stdout.write("\r" + " " * 120 + "\r")
                 sys.stdout.flush()
                 _console.print(
                     f"[yellow]No knowledge base guidance available for {classification.category} - Assistant staying silent[/yellow]"
@@ -582,7 +582,7 @@ class SupportAssistant:
                 return None
 
             # Clear the status line
-            sys.stdout.write("\r" + " " * 80 + "\r")
+            sys.stdout.write("\r" + " " * 120 + "\r")
             sys.stdout.flush()
 
             return {
@@ -609,7 +609,7 @@ class SupportAssistant:
 
         except Exception as e:
             # Clear the status line
-            sys.stdout.write("\r" + " " * 80 + "\r")
+            sys.stdout.write("\r" + " " * 120 + "\r")
             sys.stdout.flush()
             print(f"ERROR: Error analyzing request: {e}")
             return {
@@ -1090,8 +1090,11 @@ Answer with just "HANDLE" or "HUMAN_REVIEW"."""
         status_text = f"⏺ {message}"
         detail_text = f"({self._tool_call_count} tool {'use' if self._tool_call_count == 1 else 'uses'})"
 
-        # Clear line and print status
-        sys.stdout.write(f"\r{status_text} {detail_text}")
+        # Clear entire line and print status
+        terminal_width = 120  # Reasonable default terminal width
+        message = f"{status_text} {detail_text}"
+        # Clear with spaces then write message
+        sys.stdout.write(f"\r{' ' * terminal_width}\r{message}")
         sys.stdout.flush()
 
     def _estimate_tokens(self, text: str) -> int:
