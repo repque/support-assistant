@@ -1,5 +1,9 @@
 # AI Production Support Assistant Demo Guide
 
+## Demo Video
+
+🎥 **[Watch the Demo Video](./Demo.mov)** - See the system in action with real troubleshooting scenarios
+
 ## Overview
 
 This demo showcases the production-ready AI Production Support Assistant built using Model Context Protocol (MCP) architecture with vector-based semantic search and intelligent LLM decision making. The system provides context-aware analysis and resolution recommendations for production support requests with no hardcoded business logic.
