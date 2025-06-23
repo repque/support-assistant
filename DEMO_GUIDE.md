@@ -27,8 +27,8 @@ python -m pytest tests/ -v
 python -m support_agent.cli demo --no-interactive
 ```
 **Best starting point** - Shows three key scenarios:
-- **High Confidence Analysis**: Data reconciliation with detailed SQL procedures
-- **Human Review Required**: Compliance requests properly deferred to humans  
+- **High Confidence Analysis**: MarkitWire feed troubleshooting with executable Python code
+- **Human Review Required**: Code review requests properly deferred to humans  
 - **Silent Mode**: Vague queries handled gracefully without recommendations
 
 ### 2. Interactive Demo
@@ -36,10 +36,10 @@ python -m support_agent.cli demo --no-interactive
 python -m support_agent.cli demo
 ```
 Interactive session where you can test any support requests:
-- Try: `"MarkitWire feed issue"`
+- Try: `"I booked a trade in Athena but it didn't show up in the MarkitWire feed"`
 - Try: `"DCPP feed not working"`  
-- Try: `"my trade has book2 resolved to 'MarkitWiere' but validation failed"`
-- Try: `"Can you review this code https://my.code.com/sdlc/12345?"`
+- Try: `"my trade has book2 resolved to 'MarkitWire' but validation failed"`
+- Try: `"Can you please check this code: https://github.com/sdlc/hydra/pull/1234?"`
 
 ### 3. System Health Check
 ```bash

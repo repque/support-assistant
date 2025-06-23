@@ -37,12 +37,19 @@ python -m support_agent.cli info
 ## Example Usage
 
 ```
-> my trade has book2 resolved to 'MarkitWire' but it did not feed outbound
+> I booked a trade in Athena but it didn't show up in the MarkitWire feed
 
 Classification: query/feed_issue (High Priority, 85% confidence)
 ```
-### Suggested Troubleshooting Steps
-1. **Check for Validation Error:**
+### Troubleshooting Steps
+1. **Check if there are any block events:**
+   ```python
+   deal = ro(dealName)
+   ds = deal.DownstreamState("MarkitWire")
+   ds.evInfo() # this should print out downstream events, such as update events and block events
+   ```
+
+2. **Make sure the downstream trade passes validation:**
    ```python
    deal = ro(dealName)
    fs = deal.FeedState("MarkitWire")
@@ -50,25 +57,21 @@ Classification: query/feed_issue (High Priority, 85% confidence)
    dt.validate() # investigate validation failures
    ```
 
-2. **Check Downstream Events:**
-   ```python
-   deal = ro(dealName)
-   ds = deal.DownstreamState("MarkitWire")
-   ds.evInfo() # prints downstream events, block events
-   ```
+3. **Check eligibility object's IneligibilityReasons.**
 
 ```
-Performance: 6 tools, 5.9k tokens, 6.8 seconds
+Performance: 6 tools, 3.9k tokens, 10.0 seconds
 ```
 
 ## Key Features
 
 - **Context-Aware Analysis**: Skips redundant steps based on user's stated facts  
 - **Section-Level Search**: Granular semantic search at markdown section level for precise results  
-- **DFS Knowledge Retrieval**: Context-aware recursive searches to find implementation details  
+- **Deterministic Follow-up Searches**: Consistent gap identification and implementation detail retrieval
+- **Quality-Filtered Results**: Only includes follow-up content above relevance thresholds (30%+)
 - **Generic Feed Support**: Intelligent parameter substitution for any feed type (MarkitWire, DCPP, XODS, etc.)  
 - **LLM-Based Decisions**: No hardcoded business logic - all decisions made by LLM  
-- **Configurable**: All LLM parameters, timeouts, and network settings configurable via environment variables  
+- **Comprehensive Source Attribution**: Clear traceability of primary sources and implementation details
 - **Silent Mode**: Stays silent when no relevant knowledge is available  
 
 ## Core Capabilities
