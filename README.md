@@ -1,6 +1,6 @@
 # AI Production Support Assistant
 
-A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues using [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) architecture, section-level semantic search, and context-aware recursive knowledge retrieval.
+AI support assistant system that provides intelligent analysis and resolution recommendations for production issues using [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) architecture, section-level semantic search, and context-aware recursive knowledge retrieval.
 
 ## Quick Start
 
@@ -68,8 +68,7 @@ Performance: 6 tools, 3.9k tokens, 10.0 seconds
 - **Context-Aware Analysis**: Skips redundant steps based on user's stated facts  
 - **Section-Level Search**: Granular semantic search at markdown section level for precise results  
 - **Deterministic Follow-up Searches**: Consistent gap identification and implementation detail retrieval
-- **Quality-Filtered Results**: Only includes follow-up content above relevance thresholds (30%+)
-- **Generic Feed Support**: Intelligent parameter substitution for any feed type (MarkitWire, DCPP, XODS, etc.)  
+- **Quality-Filtered Results**: Only includes follow-up content above relevance thresholds (30%+) 
 - **LLM-Based Decisions**: No hardcoded business logic - all decisions made by LLM  
 - **Comprehensive Source Attribution**: Clear traceability of primary sources and implementation details
 - **Silent Mode**: Stays silent when no relevant knowledge is available  
