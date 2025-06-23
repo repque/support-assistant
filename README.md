@@ -203,6 +203,5 @@ The LLM will automatically substitute `feedType` with the actual feed type from 
 
 ## Documentation
 
-- [DESIGN.md](DESIGN.md) - System architecture and design decisions
 - [DEMO_GUIDE.md](DEMO_GUIDE.md) - Demo walkthrough guide  
 - [simplified_flow_diagram.md](simplified_flow_diagram.md) - System flow overview
