@@ -1,534 +1,245 @@
 # AI Production Support Assistant - System Design
 
-## Executive Summary
+## Overview
 
-This document defines the technical architecture for an AI-powered production support assistant system designed to assist L3 support engineers of a central team. The system employs a Model Context Protocol (MCP) based architecture to provide intelligent analysis and resolution suggestions to support engineers.
+The AI Production Support Assistant is a production-ready system built using Model Context Protocol (MCP) architecture with vector-based semantic search and intelligent LLM decision making. The system provides context-aware analysis and resolution recommendations for production support requests with zero hardcoded business logic.
 
-**Phase 1 Focus**: The assistant provides analysis and resolution recommendations to human support engineers rather than direct responses to end users.
+## Core Architecture
 
-## System Architecture Overview
-
-### High-Level Architecture
-
+### High-Level System Flow
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│            AI Support Assistant Core                            │
-│  ┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐   │
-│  │ Request         │ │  Analysis        │ │ Recommendation  │   │
-│  │ Processor       │ │  Engine          │ │ Generator       │   │
-│  └─────────────────┘ └──────────────────┘ └─────────────────┘   │
-│  ┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐   │
-│  │ Context-Aware   │ │  DFS Knowledge   │ │ Section-Level   │   │
-│  │ Gap Detection   │ │  Retrieval       │ │ Vector Search   │   │
-│  └─────────────────┘ └──────────────────┘ └─────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                   ┌────────────┴────────────┐
-                   │    MCP Integration      │
-                   │       Gateway           │
-                   └─────────────────────────┘
-                               │
-        ┌──────────────────────┼──────────────────────┐
-        │                      │                      │
-┌───────▼────────┐    ┌────────▼────────┐    ┌────────▼────────┐
-│ Knowledge      │    │ Health Monitor  │    │ Classification  │
-│ Retrieval      │    │ & Logs          │    │ & Triage        │
-│ MCP Server     │    │ MCP Server      │    │ MCP Server      │
-└────────────────┘    └─────────────────┘    └─────────────────┘
-
+User Request → Classification → Knowledge Search → LLM Analysis → Recommendations
+     ↓              ↓                ↓                ↓              ↓
+[CLI/API] → [Classification MCP] → [Knowledge MCP] → [Assistant] → [Formatted Output]
 ```
 
-### Core Design Principles
+### Key Components
 
-1. **Modularity**: MCP-based architecture enables independent development and deployment of services
-2. **Extensibility**: Plugin architecture allows easy addition of new capabilities
-3. **Resilience**: Circuit breakers and fallback mechanisms ensure system stability
-4. **Type Safety**: Strongly typed interfaces using Pydantic models
-5. **Observability**: Comprehensive logging, monitoring, and metrics collection
+1. **Support Assistant** (`support_agent/assistant.py`)
+   - Central orchestrator managing all MCP server interactions
+   - Implements confidence-based decision framework
+   - Handles LLM integration for intelligent analysis
+   - Manages token tracking and performance monitoring
 
-## MCP Server Specifications
+2. **Classification MCP Server** (`mcp_servers/classification_server.py`)
+   - Team-specific request categorization using LLM analysis
+   - JSON-configurable categories and workflows
+   - Few-shot learning with training examples
+   - Confidence scoring for decision making
 
-### MCP Server 1: Knowledge Retrieval Service
+3. **Knowledge MCP Server** (`mcp_servers/knowledge_server.py`)
+   - Section-level vector search using sentence-transformers
+   - Markdown-based knowledge base with automatic indexing
+   - LLM-based query intent analysis for better relevance
+   - Deterministic follow-up searches for gap identification
 
-**Purpose**: Interface with knowledge bases, runbooks, and documentation
+4. **Health MCP Server** (`mcp_servers/health_server.py`)
+   - System monitoring and health checks
+   - MCP server status validation
+   - Extension point for additional monitoring
 
-**Core Capabilities**:
-- Semantic search across multiple knowledge sources
-- Context-aware information retrieval
-- Multi-modal content support (text, diagrams, code)
-- Relevance scoring and ranking
+## Key Design Principles
 
-**API Interface**:
+### 1. Zero Hardcoded Business Logic
+- All decisions made by LLM analysis, not hardcoded rules
+- Generic parameter substitution (`feedType`, `dealName`) in knowledge base
+- Team configurations stored as JSON files, not in code
+- No special-case handling for specific feeds, systems, or scenarios
+
+### 2. Context-Aware Intelligence
+- Skips redundant steps based on user's stated facts
+- Intelligent parameter substitution in code examples
+- Understands user's current troubleshooting state
+- Adapts recommendations to specific user context
+
+### 3. Deterministic Quality Control
+- Temperature=0.0 for gap identification to ensure consistency
+- 30% relevance threshold for follow-up content inclusion
+- Quality filtering prevents low-value results
+- Consistent source attribution and prioritization
+
+### 4. Section-Level Knowledge Architecture
+- Knowledge base parsed at markdown section level for granular search
+- Vector embeddings computed for each section independently
+- Enables precise relevance matching and attribution
+- Supports complex hierarchical knowledge structures
+
+## Technical Implementation
+
+### Vector Search Architecture
 ```python
-class KnowledgeQuery(BaseModel):
-    query: str
-    context: Optional[str] = None
-    lob: Optional[str] = None
-    max_results: int = 10
-    filters: Optional[Dict[str, Any]] = None
-
-class KnowledgeResult(BaseModel):
-    content: str
-    source: str
-    relevance_score: float
-    metadata: Dict[str, Any]
-    last_updated: datetime
-
-class KnowledgeRetrievalService:
-    async def search(self, query: KnowledgeQuery) -> List[KnowledgeResult]
-    async def get_by_id(self, doc_id: str) -> Optional[KnowledgeResult]
-    async def get_related(self, doc_id: str, limit: int = 5) -> List[KnowledgeResult]
-```
-
-### MCP Server 2: Health Monitoring & Logs Service
-
-**Purpose**: Component health checking and log analysis
-
-**Core Capabilities**:
-- Health endpoint monitoring across services
-- Log aggregation and search
-- Pattern detection in logs
-- Performance metrics collection
-
-**API Interface**:
-```python
-class HealthCheckRequest(BaseModel):
-    service_name: str
-    endpoint_url: str
-    timeout_seconds: int = 30
-
-class LogQuery(BaseModel):
-    service_name: str
-    time_range: Tuple[datetime, datetime]
-    log_level: Optional[str] = None
-    search_terms: Optional[List[str]] = None
-    max_lines: int = 1000
-
-class HealthStatus(BaseModel):
-    service_name: str
-    status: Literal["healthy", "degraded", "unhealthy"]
-    response_time_ms: float
-    last_check: datetime
-    details: Dict[str, Any]
-
-class LogEntry(BaseModel):
-    timestamp: datetime
-    level: str
-    message: str
-    service: str
-    metadata: Dict[str, Any]
-
-class HealthMonitoringService:
-    async def check_health(self, request: HealthCheckRequest) -> HealthStatus
-    async def get_service_status(self, service_name: str) -> HealthStatus
-    async def query_logs(self, query: LogQuery) -> List[LogEntry]
-    async def analyze_logs(self, entries: List[LogEntry]) -> Dict[str, Any]
-```
-
-### MCP Server 3: Classification & Triage Service
-
-**Purpose**: Request categorization and intelligent triage
-
-**Core Capabilities**:
-- Automatic request classification
-- Pattern recognition for common issues
-- Custom category management
-- Priority assignment
-
-**API Interface**:
-```python
-class ClassificationRequest(BaseModel):
-    user_request: str
-    conversation_history: List[str] = []
-    metadata: Dict[str, Any] = {}
-
-class Classification(BaseModel):
-    category: str
-    subcategory: Optional[str]
-    confidence: float
-    priority: Literal["low", "medium", "high", "critical"]
-    suggested_workflow: str
-    reasoning: str
-
-class ClassificationService:
-    async def classify_request(self, request: ClassificationRequest) -> Classification
-    async def get_categories(self) -> List[str]
-    async def retrain_model(self, feedback_data: List[Dict[str, Any]]) -> bool
-```
-
-**Note**: For Phase 1, we have simplified the MCP architecture to focus on 3 core services that support context gathering and recommendation generation for human engineers.
-
-## Assistant Core Architecture
-
-### Core Components
-
-#### 1. Request Processor
-```python
-class RequestProcessor:
-    """
-    Processes incoming support requests from engineers.
-    Handles request validation, sanitization, and initial routing.
-    """
+# Section-level embedding generation
+for section_title, section_content, section_path in sections:
+    clean_title = remove_doc_name_contamination(section_title)
+    text_to_embed = f"{clean_title} {section_content[:1000]}"
+    embedding = generate_embedding(text_to_embed)
     
-    async def process_request(self, request: SupportRequest) -> ProcessedRequest
-    async def validate_request(self, request: SupportRequest) -> ValidationResult
-    async def extract_entities(self, request_text: str) -> List[Entity]
-    async def enrich_context(self, request: SupportRequest) -> EnrichedContext
+# Semantic search with LLM intent analysis
+query_intent = await analyze_query_intent(query)
+similarities = cosine_similarity(query_embedding, section_embeddings)
+apply_concept_boosting_and_filtering(similarities, query_intent)
 ```
 
-#### 2. Context Manager
+### Follow-Up Search Mechanism
 ```python
-class ContextManager:
-    """
-    Manages conversation context and cross-session patterns.
-    Provides context-aware information retrieval.
-    """
-    
-    async def build_context(self, conversation_id: str) -> ConversationContext
-    async def get_relevant_history(self, current_context: str) -> List[ConversationContext]
+# Deterministic gap identification
+gaps = await identify_knowledge_gaps(
+    initial_results, 
+    user_query, 
+    temperature=0.0  # Ensures consistency
+)
+
+# Quality-filtered follow-up searches
+for gap in gaps:
+    followup_results = await search_knowledge(gap.search_term)
+    filtered_results = filter_by_relevance(followup_results, threshold=0.3)
+    if filtered_results:
+        combined_knowledge += filtered_results
 ```
 
-#### 3. Analysis Engine
-```python
-class AnalysisEngine:
-    """
-    Core analysis engine that orchestrates MCP services and synthesizes information.
-    Implements the main analysis logic and recommendation generation.
-    """
-    
-    async def analyze_issue(self, request: ProcessedRequest) -> AnalysisResult
-    async def synthesize_information(self, gathered_data: Dict[str, Any]) -> AnalysisSummary
-    async def plan_analysis_steps(self, classified_request: Classification) -> List[AnalysisStep]
-    async def execute_analysis_workflow(self, workflow: AnalysisWorkflow) -> AnalysisResult
+### LLM Integration Pattern
+- **Client-Side LLM Processing**: Avoids MCP sampling deadlocks
+- **OpenAI/Anthropic Support**: Automatic API detection and fallback
+- **Structured Prompts**: Consistent prompt engineering for reliable outputs
+- **Token Tracking**: Comprehensive usage monitoring
+
+## Data Flow
+
+### 1. Request Processing
+1. User submits support request via CLI
+2. Assistant starts MCP servers if not running
+3. Classification server generates structured prompt
+4. Assistant calls LLM for request categorization
+5. Classification parsed and confidence evaluated
+
+### 2. Knowledge Retrieval
+1. Knowledge server performs vector search on user query
+2. LLM analyzes query intent for better relevance scoring
+3. Top results filtered by relevance threshold (60% primary)
+4. Gap identification performed on initial results
+
+### 3. Follow-Up Enhancement
+1. LLM identifies missing implementation details (temperature=0.0)
+2. Additional searches performed for each identified gap
+3. Follow-up results filtered by relevance (30% threshold)
+4. Combined knowledge prepared for final synthesis
+
+### 4. Response Generation
+1. Structured prompt built with combined knowledge
+2. LLM generates context-aware recommendations
+3. Source attribution computed (top 3 primary sources)
+4. Rich CLI output formatted and displayed
+
+## Configuration Architecture
+
+### Environment Variables
+```bash
+# LLM Configuration
+export OPENAI_API_KEY="your-key"
+export LLM_DEFAULT_MODEL="gpt-4o-mini"
+export LLM_TEMPERATURE="0.3"
+export LLM_MAX_TOKENS="1000"
+
+# Network Configuration  
+export MCP_HOST="127.0.0.1"
+export MCP_PORT_BASE="8000"
 ```
 
-#### 4. Workflow Orchestrator
-```python
-class WorkflowOrchestrator:
-    """
-    Manages multi-step workflows and coordinates between MCP services.
-    Handles workflow state and execution monitoring.
-    """
-    
-    async def execute_workflow(self, workflow_id: str, context: Dict[str, Any]) -> WorkflowResult
-    async def pause_workflow(self, workflow_id: str) -> None
-    async def resume_workflow(self, workflow_id: str) -> None
-    async def get_workflow_status(self, workflow_id: str) -> WorkflowStatus
+### Team Configuration (`mcp_servers/categories/`)
+```json
+{
+  "team_info": {
+    "name": "ATRS Platform Support",
+    "description": "Application Trading & Risk Services support team"
+  },
+  "categories": {
+    "feed_issue": {
+      "description": "Issues with data feeds and downstream processing",
+      "subcategories": ["validation", "outbound", "reconciliation"],
+      "workflow": "technical_guidance"
+    }
+  },
+  "training_examples": [...]
+}
 ```
 
-#### 5. Recommendation Generator
-```python
-class RecommendationGenerator:
-    """
-    Generates structured recommendations and analysis summaries for support engineers.
-    Handles formatting of technical findings and suggested resolution steps.
-    """
-    
-    async def generate_recommendations(self, analysis: AnalysisResult) -> RecommendationReport
-    async def format_analysis_summary(self, analysis_data: Dict[str, Any]) -> str
-    async def create_diagnostic_steps(self, issue_category: str, symptoms: List[str]) -> List[DiagnosticStep]
+### Knowledge Base Structure
+```
+knowledge_resources/
+├── markitwire_feed_troubleshooting.md
+├── feed_framework_troubleshooting.md  
+├── data_reconciliation.md
+└── outage_investigation.md
 ```
 
-#### 6. Vector Search Engine
-```python
-class VectorSearchEngine:
-    """
-    Provides section-level semantic search using vector embeddings for knowledge retrieval.
-    Handles section parsing, indexing, and context-aware similarity-based search operations.
-    Supports DFS recursive searches for implementation detail discovery.
-    """
-    
-    async def semantic_search(self, query: str, top_k: int = 5) -> List[SearchResult]
-    async def index_documents(self) -> bool  # Parses markdown into sections and creates embeddings
-    async def identify_knowledge_gaps(self, content: str, user_request: str) -> List[str]
-    async def recursive_search(self, knowledge_data: List, depth: int = 1) -> List[SearchResult]
+Each file uses hierarchical markdown sections for granular search:
+```markdown
+# Document Title
+## Category
+### Specific Procedure
+#### Implementation Details
 ```
 
-### Data Models
+## Quality Assurance
 
-#### Core Models
-```python
-class SupportRequest(BaseModel):
-    """Primary request model from support engineers"""
-    engineer_sid: str
-    request_id: str
-    issue_description: str
-    affected_system: Optional[str] = None
-    urgency: Literal["low", "medium", "high", "critical"]
-    lob: str
-    timestamp: datetime
-    metadata: Dict[str, Any] = {}
-    attachments: List[Attachment] = []
+### Deterministic Behavior
+- **Gap Identification**: Temperature=0.0 ensures consistent results
+- **Relevance Thresholds**: Hard limits prevent low-quality content inclusion
+- **Source Attribution**: Consistent top-3 primary source selection
+- **Parameter Substitution**: Reliable context-aware code adaptation
 
-class ProcessedRequest(BaseModel):
-    """Enriched request after initial processing"""
-    original_request: SupportRequest
-    entities: List[Entity]
-    classification: Classification
-    context: Dict[str, Any]
-    similar_issues: List[str] = []
+### Testing Strategy
+- **Functional Tests**: End-to-end CLI testing with real scenarios
+- **Context Awareness**: Verify redundant step skipping
+- **Generic Parameters**: Test feed type substitution across different feeds
+- **Human Review Detection**: Validate LLM-based decision making
+- **Silent Mode**: Ensure appropriate silence for vague queries
 
-class AnalysisResult(BaseModel):
-    """Comprehensive analysis result for support engineers"""
-    request_id: str
-    analysis_summary: str
-    confidence_score: float
-    recommended_actions: List[RecommendedAction]
-    diagnostic_steps: List[DiagnosticStep]
-    similar_incidents: List[HistoricalIncident]
-    escalation_recommended: bool
-    sources_consulted: List[str]
-    estimated_resolution_time: Optional[int] = None
+### Performance Monitoring
+- **Token Tracking**: Monitor LLM usage and costs
+- **Tool Call Counting**: Track MCP server interactions
+- **Response Times**: End-to-end latency measurement
+- **Health Checks**: Continuous server status monitoring
 
-class RecommendedAction(BaseModel):
-    """Individual recommended action for issue resolution"""
-    action_id: str
-    description: str
-    priority: int
-    risk_level: Literal["low", "medium", "high"]
-    expected_outcome: str
-    estimated_time_minutes: int
-    prerequisites: List[str] = []
+## Extension Points
 
-class AnalysisWorkflow(BaseModel):
-    """Analysis workflow definition"""
-    workflow_id: str
-    name: str
-    analysis_steps: List[AnalysisStep]
-    trigger_conditions: Dict[str, Any]
-    timeout_minutes: int = 15
-```
+### Adding New Knowledge
+1. Create markdown files in `knowledge_resources/`
+2. Use parameterized examples (`feedType`, `dealName`)
+3. Maintain clear hierarchical section structure
+4. System automatically indexes on startup
 
-## Data Flow Design
+### Team Configuration
+1. Add JSON config file to `mcp_servers/categories/`
+2. Define team-specific categories and workflows
+3. Include training examples for few-shot learning
+4. No code changes required
 
-### Request Processing Pipeline
+### Additional MCP Servers
+1. Implement FastMCP server interface
+2. Register tools with appropriate schemas
+3. Add to `MCPConfig` server definitions
+4. Assistant automatically integrates via MCP protocol
 
-```
-1. Request Ingestion
-   ├── User request validation
-   └── Request context extraction
+## Security Considerations
 
-2. Initial Triage & Classification
-   ├── Issue classification (Classification MCP Service)
-   └── Analysis workflow selection
+- **API Key Management**: Environment variable based, no hardcoded keys
+- **Input Validation**: MCP schema validation on all inputs
+- **Content Filtering**: No sensitive information in knowledge base
+- **Audit Trail**: Comprehensive logging of all operations
 
-3. Context Building
-   ├── Historical incident lookup
-   ├── System status retrieval
-   └── Knowledge base search preparation
+## Performance Characteristics
 
-4. Information Gathering
-   ├── Section-level knowledge search (Knowledge Retrieval MCP)
-   ├── Context-aware gap identification (LLM-based)
-   ├── DFS recursive knowledge retrieval for missing details
-   ├── Health status checks (Health Monitor MCP)
-   └── Log analysis (Health Monitor MCP)
+- **Response Time**: 4-8 seconds end-to-end for typical queries
+- **Token Usage**: 3-6k tokens per analysis (optimized prompts)
+- **Knowledge Search**: <1 second semantic search across full knowledge base
+- **Scalability**: Stateless design supports horizontal scaling
+- **Memory Usage**: Efficient vector storage with cleanup handlers
 
-5. Analysis & Synthesis
-   ├── Multi-source data analysis
-   ├── Pattern recognition and matching
-   └── Resolution recommendation generation
+## Future Enhancements
 
-6. Confidence Assessment
-   ├── Analysis confidence scoring
-   ├── Recommendation reliability evaluation
-   └── Escalation recommendation
-
-7. Report Generation
-   ├── Analysis summary formatting
-   ├── Diagnostic steps compilation
-   └── Actionable recommendations
-
-8. Delivery to Support Engineer
-   ├── Structured report delivery
-   ├── Feedback collection setup
-   └── Analysis tracking and metrics
-```
-
-### Integration Patterns
-
-#### 1. Async Processing Pattern
-```python
-class AsyncProcessor:
-    """
-    Handles long-running operations without blocking the main response flow.
-    Used for log analysis, comprehensive health checks, and batch operations.
-    """
-    
-    async def submit_task(self, task: Task) -> str  # Returns task_id
-    async def get_task_status(self, task_id: str) -> TaskStatus
-    async def get_task_result(self, task_id: str) -> Optional[TaskResult]
-```
-
-#### 2. Retry with Backoff Pattern
-```python
-class RetryHandler:
-    """
-    Implements intelligent retry logic with exponential backoff.
-    Handles transient failures in MCP service communications.
-    """
-    
-    async def retry_with_backoff(
-        self, 
-        operation: Callable, 
-        max_retries: int = 3,
-        base_delay: float = 1.0
-    ) -> Any
-```
-
-## Technical Design Decisions
-
-### 1. Conversation Context Management
-**Decision**: Hybrid approach combining in-memory context with persistent storage.
-
-**Rationale**: 
-- In-memory: Fast access for active conversations
-- Persistent storage: Cross-session continuity and pattern recognition
-- Context summarization: Manage memory usage while preserving essential information
-
-**Implementation**: 
-- Langgraph native memory integration
-- Context summarization after conversation completion
-
-### 2. Response Quality and Speed Balance
-**Decision**: Implement tiered response strategy with confidence thresholds.
-
-**Rationale**:
-- High confidence: Immediate response
-- Medium confidence: Additional validation step
-- Low confidence: Escalation with context
-
-**Implementation**:
-- Parallel information gathering from multiple MCP services
-- Streaming responses for long-running queries
-- Confidence-based response strategies
-
-### 3. External Knowledge Base Integration
-**Decision**: Textual knowledge base with semantic search and hierarchical organization.
-
-**Structure**:
-```
-Knowledge Base
-├── Runbooks (step-by-step procedures)
-├── Troubleshooting Guides (diagnostic workflows)
-├── System Documentation (architecture, APIs)
-├── Historical Incidents (patterns, solutions)
-└── Best Practices (recommendations, standards)
-```
-
-**Implementation**: MCP Server.
-
-### 4. Confidence Scoring Algorithm
-**Decision**: Multi-factor confidence scoring with dynamic thresholds.
-
-**Factors**:
-- Source reliability (knowledge base vs. historical incidents)
-- Information completeness (all required data available)
-- Pattern match strength (similarity to resolved cases)
-
-**Implementation**: Weighted scoring model with category-specific thresholds.
-
-### 5. Learning and Improvement
-**Decision**: Continuous learning through feedback loops and pattern recognition.
-
-**Mechanisms**:
-- Resolution outcome tracking
-- Pattern recognition from successful interventions
-
-**Implementation**: Invoke knowledge updates based on interaction data.
-
-## Security and Deployment Considerations
-
-### Security Requirements
-1. **Authentication**: MCP supporting OAuth 2.0 with fid-based access control
-2. **Audit Logging**: Comprehensive audit trail for all actions
-
-
-### Observability Stack
-1. **Metrics**: Prometheus with custom business metrics
-2. **Tracing**: Distributed tracing with Jaeger
-3. **Dashboards**: Grafana dashboards for operational visibility
-
-## Implementation Roadmap
-
-### Phase 1: Core Architecture & Demo 
-
-#### Foundation
-- [ ] Project structure and development environment setup
-- [ ] Core data models and API contracts
-- [ ] MCP integration framework
-- [ ] Basic agent engine structure
-
-#### MCP Services (Mock Implementations)
-- [ ] Knowledge Retrieval Service with sample runbooks and documentation
-- [ ] Classification & Triage Service with basic issue categorization
-- [ ] Health monitoring capabilities for system status checks
-- [ ] Analysis & Recommendation Service for suggestion generation
-
-#### Analysis Assistant Core
-- [ ] Request processor implementation
-- [ ] Context management system
-- [ ] Analysis workflow orchestration
-- [ ] Recommendation generation engine
-- [ ] Confidence assessment system
-
-#### Integration & Demo
-- [ ] Testbed CLI interface for receiving user requests and showing generated response for support engineer (similar to Claude Code CLI)
-- [ ] End-to-end analysis workflow testing
-- [ ] Sample scenarios for common support issues
-
-## Technology Stack
-
-### Backend Services
-- **Language**: Python 3.12+
-- **Framework**: FastAPI with FastMCP for MCP servers
-- **Data Validation**: Pydantic v2
-- **Vector Search**: sentence-transformers with all-MiniLM-L6-v2 model
-- **LLM Integration**: OpenAI/Anthropic APIs with configurable parameters
-- **Configuration**: Environment variable-based configuration system
-
-### Development Tools
-- **Testing**: pytest with async support and comprehensive functional tests
-- **Code Quality**: ruff for linting and formatting
-- **Configuration**: Pydantic-based configuration with environment variable overrides
-- **Knowledge Base**: Pure markdown with automatic section parsing
-
-## Success Metrics & KPIs
-
-### Primary Metrics
-1. **Analysis Accuracy**: > 85% of recommendations deemed helpful by support engineers
-2. **Time to Analysis**: < 5 minutes for standard issue analysis
-3. **Confidence Reliability**: Analysis confidence scores correlate with engineer feedback
-4. **Knowledge Coverage**: > 80% of queries find relevant knowledge base matches
-
-### Secondary Metrics
-1. **Engineer Adoption**: Active usage across support teams
-2. **Knowledge Base Utilization**: Track most/least used content
-3. **Analysis Completeness**: Percentage of recommendations with actionable steps
-
-### Learning Metrics
-1. **Model Improvement**: Month-over-month confidence score increases
-2. **Pattern Recognition**: Successful identification of recurring issues
-3. **Feedback Quality**: Percentage of actionable feedback received
-4. **Knowledge Growth**: Rate of knowledge base expansion
-
----
-
-## Conclusion
-
-This design provides a focused, scalable foundation for the AI Production Support Analysis Assistant system. The MCP-based architecture ensures modularity and extensibility, while the streamlined data flow design addresses the specific requirements of providing intelligent analysis and recommendations to support engineers.
-
-**Phase 1 Benefits:**
-- Reduced complexity by focusing on analysis and assitance rather than direct user interaction
-- Clear value proposition for support engineers through actionable recommendations
-- Simplified testing and validation through engineer feedback
-- Lower risk deployment as a support tool rather than customer-facing system
-
-The implementation roadmap balances rapid delivery of core analysis functionality with the need for reliable, production-ready features. The focus on accuracy, confidence assessment, and continuous improvement ensures the system provides genuine value to support engineers.
-
-Key success factors include:
-- Strong typing and validation throughout the system
-- Comprehensive error handling and fallback mechanisms
-- Accurate confidence scoring to build engineer trust
-- Clear, actionable recommendations with diagnostic steps
-- Robust monitoring and feedback collection
+1. **Caching Layer**: Redis-based caching for frequent queries
+2. **Real-time Learning**: Feedback loop for improving classifications
+3. **Advanced Analytics**: Query pattern analysis and optimization
+4. **Multi-modal Support**: Image and document analysis capabilities
+5. **Integration APIs**: REST/GraphQL endpoints for external systems
