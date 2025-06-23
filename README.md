@@ -1,6 +1,6 @@
 # AI Production Support Assistant
 
-A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues using Model Context Protocol (MCP) architecture, section-level semantic search, and context-aware recursive knowledge retrieval.
+A production-ready AI support assistant system that provides intelligent analysis and resolution recommendations for production issues using [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) architecture, section-level semantic search, and context-aware recursive knowledge retrieval.
 
 ## Quick Start
 
