@@ -38,42 +38,36 @@
       "text": "Can you bless this code?",
       "category": "bless_request",
       "subcategory": "bless",
-      "priority": "medium",
       "reasoning": "Request for production deployment approval"
     },
     {
       "text": "Please review this code change",
       "category": "review_request", 
       "subcategory": "code_review",
-      "priority": "medium",
       "reasoning": "Code review request for shared system component"
     },
     {
       "text": "Trade settlement feed from clearing house stopped working",
       "category": "query",
       "subcategory": "feed_issue", 
-      "priority": "high",
       "reasoning": "Technical feed issue requiring troubleshooting guidance"
     },
     {
       "text": "Risk management system is completely down",
       "category": "outage",
       "subcategory": "system_down",
-      "priority": "critical", 
       "reasoning": "Critical system outage affecting operations"
     },
     {
       "text": "Position reconciliation showing $2M discrepancy",
       "category": "data_issue",
       "subcategory": "reconciliation",
-      "priority": "high",
       "reasoning": "Significant data discrepancy requiring investigation"
     },
     {
       "text": "How do I configure the trade booking API timeout settings?",
       "category": "query",
       "subcategory": "technical_guidance",
-      "priority": "low",
       "reasoning": "Configuration guidance request"
     }
   ]

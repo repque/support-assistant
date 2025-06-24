@@ -2,7 +2,7 @@
 
 This module implements an MCP (Model Context Protocol) server that provides intelligent
 classification and triaging of support requests. It uses LLM-based classification to
-categorize requests by team, priority, and issue type, enabling automated routing
+categorize requests by team and issue type, enabling automated routing
 and workflow suggestions for support systems.
 
 The server supports multiple teams with custom category configurations and provides
@@ -134,7 +134,7 @@ class TeamConfigManager:
 
         Returns:
             List[Dict[str, Any]]: List of training examples, each containing
-                                 text, category, subcategory, priority, and reasoning.
+                                 text, category, subcategory, and reasoning.
 
         Raises:
             ValueError: If the specified team is not found in loaded configurations.
@@ -192,9 +192,8 @@ INSTRUCTIONS:
 1. Read the support request carefully and analyze the BUSINESS CONTEXT
 2. Determine which category best matches the request based on the category descriptions above
 3. Choose the most appropriate subcategory within that category
-4. Assign priority based on business impact: low, medium, high, or critical
-5. Provide clear reasoning for your classification decision
-6. IMPORTANT: If the request is vague, unclear, or lacks specific details (e.g., "something is broken", "I need help", "there's an issue"), you MUST assign a LOW confidence score (0.3 or less)
+4. Provide clear reasoning for your classification decision
+5. IMPORTANT: If the request is vague, unclear, or lacks specific details (e.g., "something is broken", "I need help", "there's an issue"), you MUST assign a LOW confidence score (0.3 or less)
 
 Use the category descriptions and examples below to guide your classification. Each category has specific subcategories and workflows defined by the team.
 
@@ -207,7 +206,6 @@ EXAMPLES:
 Request: "{example['text']}"
 Category: {example['category']}
 Subcategory: {example['subcategory']}
-Priority: {example['priority']}
 Reasoning: {example['reasoning']}
 """
 
@@ -217,7 +215,6 @@ Respond with a JSON object in this exact format:
 {
   "category": "category_name",
   "subcategory": "subcategory_name", 
-  "priority": "priority_level",
   "confidence": 0.85,  // MUST be 0.3 or less for vague requests!
   "reasoning": "Brief explanation of classification decision"
 }
@@ -523,7 +520,7 @@ class ClassificationServer:
 
         Returns:
             Dict[str, Any]: Parsed classification result with category, subcategory,
-                          confidence, priority, workflow, and reasoning.
+                          confidence, workflow, and reasoning.
 
         Raises:
             RuntimeError: If the LLM response cannot be parsed as valid JSON or
@@ -561,7 +558,6 @@ class ClassificationServer:
                 "category": classification.get("category", "query"),
                 "subcategory": classification.get("subcategory", "unknown"),
                 "confidence": float(classification.get("confidence", 0.5)),
-                "priority": classification.get("priority", "medium"),
                 "suggested_workflow": classification["suggested_workflow"],
                 "reasoning": classification.get(
                     "reasoning", "Classification based on LLM analysis"
@@ -595,7 +591,7 @@ class ClassificationServer:
 
         Returns:
             Dict[str, Any]: Classification result with category, subcategory,
-                          confidence, priority, workflow, and reasoning.
+                          confidence, workflow, and reasoning.
 
         Raises:
             RuntimeError: If server session is not initialized, LLM returns
@@ -670,7 +666,6 @@ class ClassificationServer:
                 "category": classification.get("category", "query"),
                 "subcategory": classification.get("subcategory", "unknown"),
                 "confidence": float(classification.get("confidence", 0.5)),
-                "priority": classification.get("priority", "medium"),
                 "suggested_workflow": classification["suggested_workflow"],
                 "reasoning": classification.get(
                     "reasoning", "Classification based on LLM analysis"

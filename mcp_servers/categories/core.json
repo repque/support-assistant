@@ -41,49 +41,42 @@
       "text": "How do I set up automated testing in our CI/CD pipeline?",
       "category": "query",
       "subcategory": "how_to",
-      "priority": "low",
       "reasoning": "General guidance request for CI/CD setup"
     },
     {
       "text": "Nightly ETL job failed with timeout error",
       "category": "jobs",
       "subcategory": "etl_issue",
-      "priority": "high",
       "reasoning": "ETL process failure affecting data pipeline"
     },
     {
       "text": "Docker build is failing in the deployment pipeline",
       "category": "sdlc",
       "subcategory": "build_failure",
-      "priority": "medium",
       "reasoning": "Build system preventing deployment"
     },
     {
       "text": "PostgreSQL queries are running extremely slow",
       "category": "database",
       "subcategory": "db_performance",
-      "priority": "high",
       "reasoning": "Database performance issue affecting applications"
     },
     {
       "text": "Kubernetes cluster is hitting memory limits",
       "category": "cloud",
       "subcategory": "resource_limit",
-      "priority": "high",
       "reasoning": "Cloud resource constraint affecting service availability"
     },
     {
       "text": "ML model inference API is returning 500 errors",
       "category": "ai",
       "subcategory": "inference_problem",
-      "priority": "high",
       "reasoning": "AI model serving issue affecting application functionality"
     },
     {
       "text": "Data science training pipeline is stuck on feature extraction",
       "category": "ai",
       "subcategory": "data_pipeline",
-      "priority": "medium",
       "reasoning": "ML data processing pipeline issue"
     }
   ]

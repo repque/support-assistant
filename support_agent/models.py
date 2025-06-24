@@ -35,14 +35,13 @@ class Classification(BaseModel):
     """Request classification result from the classification server.
 
     Contains the categorization and analysis results for a support request.
-    This model is used to determine how a request should be handled, its
-    priority level, and the appropriate workflow for resolution.
+    This model is used to determine how a request should be handled and
+    the appropriate workflow for resolution.
 
     Attributes:
         category: Primary category of the issue (e.g., 'technical_issue', 'query').
         subcategory: More specific categorization within the primary category.
         confidence: Confidence score (0.0-1.0) in the classification accuracy.
-        priority: Priority level ('low', 'medium', 'high', 'critical').
         suggested_workflow: Recommended workflow for handling this type of request.
         reasoning: Explanation of why this classification was chosen.
     """
@@ -50,7 +49,6 @@ class Classification(BaseModel):
     category: str
     subcategory: str
     confidence: float
-    priority: str
     suggested_workflow: str
     reasoning: str
 

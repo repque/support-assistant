@@ -419,7 +419,6 @@ async def display_analysis_results(result: dict):
             Panel(
                 f"[bold]Category:[/bold] {classification['category']}\n"
                 f"[bold]Subcategory:[/bold] {classification.get('subcategory', 'N/A')}\n"
-                f"[bold]Priority:[/bold] {classification['priority']}\n"
                 f"[bold]Confidence:[/bold] {confidence_pct:.1f}%\n"
                 f"[bold]Reasoning:[/bold] {classification['reasoning']}",
                 title="Issue Classification",
