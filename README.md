@@ -39,7 +39,7 @@ python -m support_agent.cli info
 ```
 > I booked a trade in Athena but it didn't show up in the MarkitWire feed
 
-Classification: query/feed_issue (High Priority, 85% confidence)
+Classification: query (85% confidence)
 ```
 ### Troubleshooting Steps
 1. **Check if there are any block events:**
