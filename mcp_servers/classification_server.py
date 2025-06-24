@@ -190,21 +190,13 @@ CATEGORIES:
     system_prompt += """
 INSTRUCTIONS:
 1. Read the support request carefully and analyze the BUSINESS CONTEXT
-2. Determine the ROOT CAUSE type, not just the symptoms described
-3. Use this logical framework:
-   
-   CONTEXTUAL ANALYSIS FRAMEWORK:
-   - If data exists in source system but missing/wrong in destination → query/feed_issue
-   - If system is completely unavailable or down → outage  
-   - If data is corrupted/wrong within the same system → data_issue
-   - If request asks for code approval/deployment → bless_request
-   - If request asks for code/architecture review → review_request
-   - If request asks how to do something → query/technical_guidance
+2. Determine which category best matches the request based on the category descriptions above
+3. Choose the most appropriate subcategory within that category
+4. Assign priority based on business impact: low, medium, high, or critical
+5. Provide clear reasoning for your classification decision
+6. IMPORTANT: If the request is vague, unclear, or lacks specific details (e.g., "something is broken", "I need help", "there's an issue"), you MUST assign a LOW confidence score (0.3 or less)
 
-4. Choose the best subcategory within that category  
-5. Assign priority based on business impact: low, medium, high, or critical
-6. Provide clear reasoning focusing on ROOT CAUSE, not symptoms
-7. IMPORTANT: If the request is vague, unclear, or lacks specific details (e.g., "something is broken", "I need help", "there's an issue"), you MUST assign a LOW confidence score (0.3 or less)
+Use the category descriptions and examples below to guide your classification. Each category has specific subcategories and workflows defined by the team.
 
 EXAMPLES:
 """
