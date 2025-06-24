@@ -403,7 +403,7 @@ class SupportAssistant:
     async def analyze_support_request(self, request: SupportRequest) -> Optional[Dict]:
         """Analyze a support request using coordinated MCP server capabilities.
 
-        Orchestrates the complete analysis workflow:
+        Orchestrates the complete analysis process:
         1. Classifies the request to determine category and priority
         2. Checks if the request should be handled (some require human review)
         3. Searches the knowledge base for relevant solutions
@@ -1151,12 +1151,12 @@ Answer with just "HANDLE" or "HUMAN_REVIEW"."""
         """Get comprehensive system information and capabilities.
 
         Retrieves information about the support system's current configuration
-        and capabilities, including available categories, workflows, and
+        and capabilities, including available categories and
         knowledge base status. Used for system diagnostics and capability
         discovery.
 
         Returns:
-            Dict: System information including available categories, workflows,
+            Dict: System information including available categories
                  and resource counts. Returns error dict if servers not running.
         """
         if not self.servers_running:
@@ -1182,12 +1182,6 @@ Answer with just "HANDLE" or "HUMAN_REVIEW"."""
                 ),
                 "knowledge_base_entries": 3,  # Based on our servers
                 "active_conversations": 0,
-                "supported_workflows": [
-                    "technical_guidance",
-                    "outage_investigation",
-                    "data_issue_resolution",
-                    "human_review_required",
-                ],
             }
         except Exception as e:
             return {"error": str(e)}

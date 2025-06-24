@@ -6,25 +6,20 @@
   },
   "categories": {
     "query": {
-      "description": "Technical questions or troubleshooting requests that can be resolved with guidance",
-      "workflow": "technical_guidance"
+      "description": "Technical questions or troubleshooting requests that can be resolved with guidance"
     },
     "outage": {
-      "description": "System outages, service unavailability, or critical service disruptions",
-      "workflow": "outage_investigation"
+      "description": "System outages, service unavailability, or critical service disruptions"
     },
     "data_issue": {
-      "description": "Data quality problems, reconciliation discrepancies, missing data, etc.",
-      "workflow": "data_issue_resolution"
+      "description": "Data quality problems, reconciliation discrepancies, missing data, etc."
     },
     "bless_request": {
       "description": "Requests for blessing of code changes, deployments, or production releases",
-      "workflow": "human_review_required",
       "assistant_action": "skip"
     },
     "review_request": {
       "description": "Requests for code review, architecture review, or technical documentation review",
-      "workflow": "human_review_required", 
       "assistant_action": "skip"
     }
   },

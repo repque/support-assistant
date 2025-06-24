@@ -6,28 +6,22 @@
   },
   "categories": {
     "query": {
-      "description": "General technical questions, how-to requests, and troubleshooting guidance",
-      "workflow": "technical_guidance"
+      "description": "General technical questions, how-to requests, and troubleshooting guidance"
     },
     "jobs": {
-      "description": "Batch jobs, scheduled tasks, ETL processes, and automation workflows",
-      "workflow": "jobs_investigation"
+      "description": "Batch jobs, scheduled tasks, ETL processes, and automation workflows"
     },
     "sdlc": {
-      "description": "Software Development Lifecycle issues including CI/CD, builds, deployments, and releases",
-      "workflow": "sdlc_support"
+      "description": "Software Development Lifecycle issues including CI/CD, builds, deployments, and releases"
     },
     "database": {
-      "description": "Database-related issues including performance, connectivity, schema changes, and data access",
-      "workflow": "database_support"
+      "description": "Database-related issues including performance, connectivity, schema changes, and data access"
     },
     "cloud": {
-      "description": "Cloud infrastructure, services, scaling, networking, and resource management",
-      "workflow": "cloud_support"
+      "description": "Cloud infrastructure, services, scaling, networking, and resource management"
     },
     "ai": {
-      "description": "AI/ML model deployment, training, inference, and data science infrastructure",
-      "workflow": "ai_support"
+      "description": "AI/ML model deployment, training, inference, and data science infrastructure"
     }
   },
   "training_examples": [

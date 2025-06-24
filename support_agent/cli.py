@@ -146,7 +146,6 @@ def info():
 
     Displays comprehensive information about the support system including:
     - Available support categories
-    - Supported workflows
     - Knowledge base statistics
     - System configuration details
 
@@ -180,11 +179,6 @@ def info():
                 for category in categories:
                     console.print(f"  - {category}")
 
-            workflows = system_info.get("supported_workflows", [])
-            if workflows:
-                console.print("\n[bold]Available Workflows:[/bold]")
-                for workflow in workflows:
-                    console.print(f"  - {workflow}")
         finally:
             await assistant.stop_mcp_servers()
 

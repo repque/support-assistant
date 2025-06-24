@@ -55,7 +55,7 @@ Verifies all MCP servers (Classification, Knowledge, Health) are operational.
 ```bash
 python -m support_agent.cli info
 ```
-Shows system capabilities, knowledge base entries, and supported workflows.
+Shows system capabilities and knowledge base entries.
 
 ### 5. Advanced Configuration
 ```bash

@@ -3,7 +3,7 @@
 This module implements an MCP (Model Context Protocol) server that provides intelligent
 classification and triaging of support requests. It uses LLM-based classification to
 categorize requests by team and issue type, enabling automated routing
-and workflow suggestions for support systems.
+for support systems.
 
 The server supports multiple teams with custom category configurations and provides
 both synchronous classification (with client-provided LLM responses) and asynchronous
@@ -37,7 +37,7 @@ class TeamConfigManager:
     """Manages team-specific category configurations for support request classification.
 
     This class is responsible for loading and managing team-specific configuration files
-    that define categories, subcategories, workflows, and training examples for each
+    that define categories and training examples for each
     support team. It provides a centralized interface for accessing team configurations
     used in the classification process.
 
@@ -59,7 +59,7 @@ class TeamConfigManager:
 
         This method scans the categories directory for JSON files and loads each one
         as a team configuration. Each configuration file should contain team info,
-        categories with subcategories and workflows, and training examples.
+        categories and training examples.
 
         The method gracefully handles missing directories and malformed files,
         logging warnings or errors as appropriate without failing the entire
@@ -114,7 +114,7 @@ class TeamConfigManager:
 
         Returns:
             Dict[str, Any]: Dictionary mapping category names to their definitions,
-                          including descriptions, subcategories, and workflows.
+                          including descriptions.
 
         Raises:
             ValueError: If the specified team is not found in loaded configurations.
@@ -191,7 +191,7 @@ INSTRUCTIONS:
 3. Provide clear reasoning for your classification decision
 4. IMPORTANT: If the request is vague, unclear, or lacks specific details (e.g., "something is broken", "I need help", "there's an issue"), you MUST assign a LOW confidence score (0.3 or less)
 
-Use the category descriptions and examples below to guide your classification. Each category has specific workflows defined by the team.
+Use the category descriptions and examples below to guide your classification.
 
 EXAMPLES:
 """
@@ -504,8 +504,7 @@ class ClassificationServer:
         """Parse LLM response to extract classification results.
 
         Handles various response formats including raw JSON and markdown code blocks.
-        Validates the parsed classification and enriches it with workflow suggestions
-        based on the team's category configurations.
+        Validates the parsed classification based on the team's category configurations.
 
         Args:
             llm_response: Raw response text from the LLM.
@@ -514,7 +513,7 @@ class ClassificationServer:
 
         Returns:
             Dict[str, Any]: Parsed classification result with category,
-                          confidence, workflow, and reasoning.
+                          confidence, and reasoning.
 
         Raises:
             RuntimeError: If the LLM response cannot be parsed as valid JSON or
@@ -536,22 +535,14 @@ class ClassificationServer:
             # Parse the classification result
             classification = json.loads(response_text)
 
-            # Validate and add suggested_workflow based on category
+            # Category validation
             category = classification.get("category", "query")
             team_categories = self.team_config.get_team_categories(team)
-
-            if category in team_categories:
-                classification["suggested_workflow"] = team_categories[category].get(
-                    "workflow", "technical_guidance"
-                )
-            else:
-                classification["suggested_workflow"] = "technical_guidance"
 
             # Ensure all required fields are present
             result = {
                 "category": classification.get("category", "query"),
                 "confidence": float(classification.get("confidence", 0.5)),
-                "suggested_workflow": classification["suggested_workflow"],
                 "reasoning": classification.get(
                     "reasoning", "Classification based on LLM analysis"
                 ),
@@ -584,7 +575,7 @@ class ClassificationServer:
 
         Returns:
             Dict[str, Any]: Classification result with category,
-                          confidence, workflow, and reasoning.
+                          confidence, and reasoning.
 
         Raises:
             RuntimeError: If server session is not initialized, LLM returns
@@ -645,20 +636,13 @@ class ClassificationServer:
             # Parse the classification result
             classification = json.loads(response_text)
 
-            # Validate and add suggested_workflow based on category
+            # Category validation
             category = classification.get("category", "query")
-            if category in CATEGORIES:
-                classification["suggested_workflow"] = CATEGORIES[category].get(
-                    "workflow", "technical_guidance"
-                )
-            else:
-                classification["suggested_workflow"] = "technical_guidance"
 
             # Ensure all required fields are present
             result = {
                 "category": classification.get("category", "query"),
                 "confidence": float(classification.get("confidence", 0.5)),
-                "suggested_workflow": classification["suggested_workflow"],
                 "reasoning": classification.get(
                     "reasoning", "Classification based on LLM analysis"
                 ),
