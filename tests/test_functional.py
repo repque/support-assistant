@@ -176,6 +176,94 @@ async def test_human_review_detection():
         await assistant.stop_mcp_servers()
 
 
+@pytest.mark.asyncio
+async def test_configuration_based_human_review():
+    """Test that categories with assistant_action: 'skip' are properly handled.
+    
+    This test verifies the specific bug that was discovered where review_request
+    and bless_request categories with assistant_action: "skip" in the configuration
+    were not being honored, causing the system to provide troubleshooting steps
+    instead of staying silent for human review.
+    """
+    config = MCPConfig()
+    assistant = SupportAssistant(config)
+
+    success = await assistant.start_mcp_servers()
+    assert success, "Failed to start MCP servers"
+
+    try:
+        # Test review_request category (has assistant_action: "skip" in atrs.json)
+        # Use the exact training example that would classify as review_request
+        review_request = SupportRequest(
+            engineer_sid="test-engineer",
+            request_id="TEST-REVIEW-CONFIG",
+            issue_description="Please review this code change",  # Matches training example
+            lob="platform",
+        )
+
+        result = await assistant.analyze_support_request(review_request)
+        assert result is None, "review_request category should stay silent due to assistant_action: skip configuration"
+
+        # Test bless_request category (has assistant_action: "skip" in atrs.json)
+        # Use the exact training example that would classify as bless_request
+        bless_request = SupportRequest(
+            engineer_sid="test-engineer",
+            request_id="TEST-BLESS-CONFIG",
+            issue_description="Can you bless this code?",  # Matches training example
+            lob="platform",
+        )
+
+        result = await assistant.analyze_support_request(bless_request)
+        assert result is None, "bless_request category should stay silent due to assistant_action: skip configuration"
+
+        # Verify that the configuration is being checked by testing category details access
+        # This ensures the fix is actually checking the assistant_action field
+        classification_session = assistant.mcp_sessions["classification"]
+        
+        # Test that we can access the category details that should contain assistant_action: "skip"
+        review_category_result = await classification_session.call_tool(
+            "get_category_details",
+            {"team": "atrs", "category": "review_request"}
+        )
+        review_category_data = review_category_result.content[0].text
+        import json
+        review_category = json.loads(review_category_data)
+        assert review_category.get("assistant_action") == "skip", "review_request should have assistant_action: skip in config"
+
+        bless_category_result = await classification_session.call_tool(
+            "get_category_details", 
+            {"team": "atrs", "category": "bless_request"}
+        )
+        bless_category_data = bless_category_result.content[0].text
+        bless_category = json.loads(bless_category_data)
+        assert bless_category.get("assistant_action") == "skip", "bless_request should have assistant_action: skip in config"
+
+        # Test that categories without assistant_action: "skip" still work normally
+        # This should get classified as data_issue and provide recommendations
+        normal_request = SupportRequest(
+            engineer_sid="test-engineer",
+            request_id="TEST-NORMAL-CONFIG",
+            issue_description="I booked a trade in Athena but it didn't show up in the MarkitWire feed",
+            lob="platform",
+        )
+
+        result = await assistant.analyze_support_request(normal_request)
+        assert result is not None, "Normal requests should provide recommendations when knowledge is available"
+        assert "recommendations" in result, "Normal requests should include recommendations"
+
+        # Verify that data_issue category does NOT have assistant_action: "skip"
+        data_category_result = await classification_session.call_tool(
+            "get_category_details",
+            {"team": "atrs", "category": "data_issue"}
+        )
+        data_category_data = data_category_result.content[0].text
+        data_category = json.loads(data_category_data)
+        assert data_category.get("assistant_action") != "skip", "data_issue should not have assistant_action: skip"
+
+    finally:
+        await assistant.stop_mcp_servers()
+
+
 def test_no_hardcoded_logic_in_codebase():
     """Verify no hardcoded patterns remain in the codebase."""
 

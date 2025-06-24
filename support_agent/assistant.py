@@ -491,7 +491,34 @@ class SupportAssistant:
 
             classification = Classification(**classification_data)
 
-            # Step 2: Check if we should handle this request using LLM
+            # Step 2: Check category configuration for explicit skip action
+            try:
+                category_details_result = await self.mcp_sessions["classification"].call_tool(
+                    "get_category_details",
+                    {
+                        "team": "atrs",
+                        "category": classification.category,
+                    },
+                )
+                category_details_text = category_details_result.content[0].text
+                if isinstance(category_details_text, str):
+                    import json
+                    category_details = json.loads(category_details_text)
+                    
+                    # Check if this category explicitly requires skipping
+                    if category_details.get("assistant_action") == "skip":
+                        # Clear the status line
+                        sys.stdout.write("\r" + " " * 120 + "\r")
+                        sys.stdout.flush()
+                        _console.print(
+                            f"[dim]Assistant staying silent - {classification.category} requires human review[/dim]"
+                        )
+                        return None
+            except Exception:
+                # If we can't get category details, continue with normal flow
+                pass
+
+            # Step 3: Check if we should handle this request using LLM (fallback)
             should_handle = await self._should_assistant_handle_request(
                 classification, request.issue_description
             )
@@ -504,7 +531,7 @@ class SupportAssistant:
                 )
                 return None
 
-            # Step 3: Search knowledge base using server-side vector embeddings
+            # Step 4: Search knowledge base using server-side vector embeddings
             self._update_tool_call_status("Knowledge(vector search)")
             knowledge_results = await self.mcp_sessions["knowledge"].call_tool(
                 "search_knowledge",
@@ -540,11 +567,11 @@ class SupportAssistant:
                             except:
                                 continue
 
-            # Step 4: Skip system health checks - removed affected_system field
+            # Step 5: Skip system health checks - removed affected_system field
             # System should infer what to check from the issue description if needed
             health_status = {}
 
-            # Step 4.5: Perform recursive knowledge searches for gaps
+            # Step 5.5: Perform recursive knowledge searches for gaps
             enhanced_knowledge_data = (
                 await self._enhance_knowledge_with_recursive_searches(
                     knowledge_data,
@@ -553,7 +580,7 @@ class SupportAssistant:
                 )
             )
 
-            # Step 5: Simple decision - if we have knowledge, provide recommendations
+            # Step 6: Simple decision - if we have knowledge, provide recommendations
             if not enhanced_knowledge_data or len(enhanced_knowledge_data) == 0:
                 # Clear the status line
                 sys.stdout.write("\r" + " " * 120 + "\r")
@@ -563,7 +590,7 @@ class SupportAssistant:
                 )
                 return None
 
-            # Step 6: Generate recommendations
+            # Step 7: Generate recommendations
             recommendations = await self._generate_recommendations(
                 classification,
                 enhanced_knowledge_data,
