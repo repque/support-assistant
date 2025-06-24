@@ -862,7 +862,6 @@ Focus on finding actionable next steps that are mentioned but not implemented wi
 
 REQUEST CLASSIFICATION:
 Category: {classification.category}
-Subcategory: {classification.subcategory or 'None'}
 
 USER REQUEST: {issue_description}
 

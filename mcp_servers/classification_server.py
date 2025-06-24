@@ -134,7 +134,7 @@ class TeamConfigManager:
 
         Returns:
             List[Dict[str, Any]]: List of training examples, each containing
-                                 text, category, subcategory, and reasoning.
+                                 text, category, and reasoning.
 
         Raises:
             ValueError: If the specified team is not found in loaded configurations.
@@ -182,20 +182,16 @@ CATEGORIES:
 
     # Add category definitions
     for category, info in categories.items():
-        subcats = ", ".join(info.get("subcategories", []))
         system_prompt += f"- {category}: {info['description']}\n"
-        if subcats:
-            system_prompt += f"  Subcategories: {subcats}\n"
 
     system_prompt += """
 INSTRUCTIONS:
 1. Read the support request carefully and analyze the BUSINESS CONTEXT
 2. Determine which category best matches the request based on the category descriptions above
-3. Choose the most appropriate subcategory within that category
-4. Provide clear reasoning for your classification decision
-5. IMPORTANT: If the request is vague, unclear, or lacks specific details (e.g., "something is broken", "I need help", "there's an issue"), you MUST assign a LOW confidence score (0.3 or less)
+3. Provide clear reasoning for your classification decision
+4. IMPORTANT: If the request is vague, unclear, or lacks specific details (e.g., "something is broken", "I need help", "there's an issue"), you MUST assign a LOW confidence score (0.3 or less)
 
-Use the category descriptions and examples below to guide your classification. Each category has specific subcategories and workflows defined by the team.
+Use the category descriptions and examples below to guide your classification. Each category has specific workflows defined by the team.
 
 EXAMPLES:
 """
@@ -205,7 +201,6 @@ EXAMPLES:
         system_prompt += f"""
 Request: "{example['text']}"
 Category: {example['category']}
-Subcategory: {example['subcategory']}
 Reasoning: {example['reasoning']}
 """
 
@@ -214,7 +209,6 @@ OUTPUT FORMAT:
 Respond with a JSON object in this exact format:
 {
   "category": "category_name",
-  "subcategory": "subcategory_name", 
   "confidence": 0.85,  // MUST be 0.3 or less for vague requests!
   "reasoning": "Brief explanation of classification decision"
 }
@@ -519,7 +513,7 @@ class ClassificationServer:
             team: Team identifier for category validation.
 
         Returns:
-            Dict[str, Any]: Parsed classification result with category, subcategory,
+            Dict[str, Any]: Parsed classification result with category,
                           confidence, workflow, and reasoning.
 
         Raises:
@@ -556,7 +550,6 @@ class ClassificationServer:
             # Ensure all required fields are present
             result = {
                 "category": classification.get("category", "query"),
-                "subcategory": classification.get("subcategory", "unknown"),
                 "confidence": float(classification.get("confidence", 0.5)),
                 "suggested_workflow": classification["suggested_workflow"],
                 "reasoning": classification.get(
@@ -590,7 +583,7 @@ class ClassificationServer:
             team: Team identifier for team-specific classification.
 
         Returns:
-            Dict[str, Any]: Classification result with category, subcategory,
+            Dict[str, Any]: Classification result with category,
                           confidence, workflow, and reasoning.
 
         Raises:
@@ -664,7 +657,6 @@ class ClassificationServer:
             # Ensure all required fields are present
             result = {
                 "category": classification.get("category", "query"),
-                "subcategory": classification.get("subcategory", "unknown"),
                 "confidence": float(classification.get("confidence", 0.5)),
                 "suggested_workflow": classification["suggested_workflow"],
                 "reasoning": classification.get(

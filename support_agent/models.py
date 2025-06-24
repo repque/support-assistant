@@ -40,14 +40,12 @@ class Classification(BaseModel):
 
     Attributes:
         category: Primary category of the issue (e.g., 'technical_issue', 'query').
-        subcategory: More specific categorization within the primary category.
         confidence: Confidence score (0.0-1.0) in the classification accuracy.
         suggested_workflow: Recommended workflow for handling this type of request.
         reasoning: Explanation of why this classification was chosen.
     """
 
     category: str
-    subcategory: str
     confidence: float
     suggested_workflow: str
     reasoning: str
