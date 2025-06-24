@@ -20,7 +20,7 @@ sequenceDiagram
         Assistant->>ClassServer: 1. Get prompt for ATRS team
         ClassServer-->>Assistant: Team-specific prompt (~2800 chars)
         Assistant->>LLM: 2. Process prompt
-        LLM-->>Assistant: {"category": "query", "subcategory": "feed_issue"}
+        LLM-->>Assistant: {"category": "query"}
         Assistant->>ClassServer: 3. Parse & validate result
         ClassServer-->>Assistant: Final classification
     end
@@ -116,8 +116,8 @@ graph TB
 
 ```
 Issue Classification
-   Category: query/feed_issue 
-   Priority: high
+   Category: query
+   Confidence: 85%
 
 Immediate Actions
    1. **Check for Block Events:**
